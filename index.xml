@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>liloew 随笔</title>
+    <link>http://liloew.github.io/</link>
+    <description>Recent content on liloew 随笔</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 10 Dec 2021 11:40:14 +0800</lastBuildDate><atom:link href="http://liloew.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Hello World</title>
+      <link>http://liloew.github.io/post/hello-world/</link>
+      <pubDate>Fri, 10 Dec 2021 11:40:14 +0800</pubDate>
+      
+      <guid>http://liloew.github.io/post/hello-world/</guid>
+      <description>Hello World 1 2 3 4 5 6  brew install hugo hugo new site liloq &amp;amp;&amp;amp; cd liloq git init git submodule add https://github.com/olOwOlo/hugo-theme-even themes/even cp themes/even/exampleSite/config.toml . hugo new post/hello-world.md   </description>
+    </item>
+    
+  </channel>
+</rss>

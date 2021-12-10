@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: http://liloew.github.io/sitemap.xml
