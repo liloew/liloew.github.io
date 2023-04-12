@@ -1,4 +1,82 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>liloew 在写字</title><link>https://blog.liloew.in/</link><description>Recent content on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sun, 26 Feb 2023 21:26:48 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>书</title><link>https://blog.liloew.in/books/</link><pubDate>Mon, 27 Feb 2023 21:27:35 +0800</pubDate><guid>https://blog.liloew.in/books/</guid><description/><content/></item><item><title>Spring Boot 项目下载文件接口问题</title><link>https://blog.liloew.in/posts/spring-boot-file-download-with-multi-thread/</link><pubDate>Sun, 26 Feb 2023 21:26:48 +0800</pubDate><guid>https://blog.liloew.in/posts/spring-boot-file-download-with-multi-thread/</guid><description>&lt;h1 id="背景">背景&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>liloew 在写字</title><link>https://blog.liloew.in/</link><description>Recent content on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Tue, 11 Apr 2023 17:45:08 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>在 CentOS 8 下编译 QEMU 以支持运行 macOS 虚拟机</title><link>https://blog.liloew.in/posts/compile-qemu-on-centos-8-with-macos-support/</link><pubDate>Tue, 11 Apr 2023 17:45:08 +0800</pubDate><guid>https://blog.liloew.in/posts/compile-qemu-on-centos-8-with-macos-support/</guid><description>背景 由于项目组选择采用 Electron 构建跨平台客户端, 因此存在一个问题就是如何利用 CI/CD 进行自动构建与发布. 当前内部使用 Jenkins 进行自动构建, 但 Jenkins 仍需要 macOS 平台以便构建 DMG 包进行分发. 因此在不考虑实体机的情况下, 最便捷的方案便是可以能创建一台 macOS 的虚拟机了, 通过虚拟机可以方便地复制构建环境从而不和任意硬件货环境绑定.
+但当前的问题一是默认情况下 CentOS 8 下提供的 4.2.0 版本的 QEMU 比较老了, 另一个问题则是 RHEL 在分发的时候移除了相当多的 QEMU 特性, 无法直接创建 macOS 虚拟机, 因此我们需要手动修改 QEMU 的代码并自行构建 RPM 包修复这两个问题.
+步骤 首先执行以下命令安装 yum-utils 和 rpm-build 两个包以便下载对应的 SRC 包同时进行编译
+sudo yum install -y yum-utils rpm-build yum-utils 包会提供一个 yumdownloader 命令, 此时再通过以下命令下载 qemu-kvm 的源代码即可:
+yumdownloader --source qemu-kvm yumdownloader 会下载对应版本的 SRC 包到当前目录, 当前 CentOS 8 系统提供的 qemu 版本为 6.</description><content>&lt;h1 id="背景">背景&lt;/h1>
+&lt;p>由于项目组选择采用 &lt;code>Electron&lt;/code> 构建跨平台客户端, 因此存在一个问题就是如何利用 &lt;code>CI/CD&lt;/code> 进行自动构建与发布. 当前内部使用 &lt;code>Jenkins&lt;/code> 进行自动构建, 但 &lt;code>Jenkins&lt;/code> 仍需要 &lt;code>macOS&lt;/code> 平台以便构建 &lt;code>DMG&lt;/code> 包进行分发. 因此在不考虑实体机的情况下, 最便捷的方案便是可以能创建一台 &lt;code>macOS&lt;/code> 的虚拟机了, 通过虚拟机可以方便地复制构建环境从而不和任意硬件货环境绑定.&lt;/p>
+&lt;p>但当前的问题一是默认情况下 &lt;code>CentOS 8&lt;/code> 下提供的 &lt;code>4.2.0&lt;/code> 版本的 &lt;code>QEMU&lt;/code> 比较老了, 另一个问题则是 &lt;code>RHEL&lt;/code> 在分发的时候移除了相当多的 &lt;code>QEMU&lt;/code> 特性, 无法直接创建 &lt;code>macOS&lt;/code> 虚拟机, 因此我们需要手动修改 &lt;code>QEMU&lt;/code> 的代码并自行构建 &lt;code>RPM&lt;/code> 包修复这两个问题.&lt;/p>
+&lt;h1 id="步骤">步骤&lt;/h1>
+&lt;p>首先执行以下命令安装 &lt;code>yum-utils&lt;/code> 和 &lt;code>rpm-build&lt;/code> 两个包以便下载对应的 &lt;code>SRC&lt;/code> 包同时进行编译&lt;/p>
+&lt;pre tabindex="0">&lt;code>sudo yum install -y yum-utils rpm-build
+&lt;/code>&lt;/pre>&lt;p>&lt;code>yum-utils&lt;/code> 包会提供一个 &lt;code>yumdownloader&lt;/code> 命令, 此时再通过以下命令下载 &lt;code>qemu-kvm&lt;/code> 的源代码即可:&lt;/p>
+&lt;pre tabindex="0">&lt;code>yumdownloader --source qemu-kvm
+&lt;/code>&lt;/pre>&lt;p>&lt;code>yumdownloader&lt;/code> 会下载对应版本的 &lt;code>SRC&lt;/code> 包到当前目录, 当前 &lt;code>CentOS 8&lt;/code> 系统提供的 &lt;code>qemu&lt;/code> 版本为 &lt;code>6.0.0&lt;/code>, 因此下载得到的包为 &lt;code>qemu-kvm-6.0.0-33.el8.src.rpm&lt;/code>. 此时再通过以下命令安装 &lt;code>SRC&lt;/code> 包即可:&lt;/p>
+&lt;pre tabindex="0">&lt;code>rpm -ivh qemu-kvm-6.0.0-33.el8.src.rpm
+&lt;/code>&lt;/pre>&lt;p>同样, 安装以上命令执行完成后会新建一个与执行命令用户绑定的 &lt;code>$HOME/rpmbuild&lt;/code> 目录, 所有相关文件都在该目录下所示:&lt;/p>
+&lt;pre tabindex="0">&lt;code>[root@vm-centos-8 ~]# tree -L 1 $HOME/rpmbuild
+/root/rpmbuild
+├── SOURCES
+└── SPECS
+2 directories, 0 files
+[root@vm-centos-8 ~]#
+&lt;/code>&lt;/pre>&lt;p>在编译前还需要安装相关的依赖库, 执行以下命令安装即可:&lt;/p>
+&lt;pre tabindex="0">&lt;code>sudo yum install -y zlib-devel wget usbredir-devel texinfo systemtap-sdt-devel systemtap systemd-devel \
+spice-server-devel spice-protocol snappy-devel rsync rdma-core-devel python3-sphinx python3-devel pixman-devel \
+perl-podlators perl-Test-Harness pciutils-devel numactl-devel bluez-libs-devel brlapi-devel check-devel cpp \
+cyrus-sasl-devel device-mapper-multipath-devel glib2-devel glusterfs-api-devel glusterfs-devel gnutls-devel \
+iasl libaio-devel libattr-devel libcacard-devel libcap-ng-devel libcurl-devel libgcrypt-devel libiscsi-devel \
+libpmem-devel libpng-devel librados-devel librbd-devel libseccomp-devel libssh-devel libtool libusbx-devel \
+libuuid-devel lzo-devel ncurses-devel nss-devel meson ninja-build libepoxy libepoxy-devel libdrm libdrm-devel \
+mesa-libgbm-devel libxkbcommon-devel
+&lt;/code>&lt;/pre>&lt;p>此时编译前的环境已经准备就绪了, 但因为 &lt;code>RedHat&lt;/code> 在构建 &lt;code>qemu&lt;/code> 时移除了一些虚拟设备, 因此我们还需要进一步修改刚刚得到的 &lt;code>$HOME/rpmbuild&lt;/code> 目录下的问题. 具体修改的文件为 &lt;code>$HOME/rpmbuild/SOURCES/0006-Enable-disable-devices-for-RHEL.patch&lt;/code>, 主要是添加以下内容:&lt;/p>
+&lt;pre tabindex="0">&lt;code>CONFIG_APPLESMC=y
+CONFIG_VMXNET3_PCI=y
+&lt;/code>&lt;/pre>&lt;p>这里在增加 &lt;code>APPLESMC&lt;/code> 支持以外还同时增加了 &lt;code>vmxnet3&lt;/code> 虚拟网卡设备主要原因在于相较于 &lt;code>E1000/E1000E&lt;/code> 而言 &lt;code>vmxnet3&lt;/code> 可以提供更好的性能, 不使用 &lt;code>virtio&lt;/code> 的原因则是 &lt;code>macOS&lt;/code> 当前对 &lt;code>virtio&lt;/code> 的支持还不太确定而 &lt;code>vmxnet3&lt;/code> 则是官方支持的. 另外由于我们是直接修改 &lt;code>patch&lt;/code> 文件, 因此需要遵守 &lt;code>patch&lt;/code> 文件格式规范, 以上只是主要修改的内容. 如果修改没有问题此时我们执行以下命令进行编译:&lt;/p>
+&lt;pre tabindex="0">&lt;code>cd $HOME/rpmbuild
+rpmbuild --nocheck --define &amp;#34;debug_package %{nil}&amp;#34; -bb SPECS/qemu-kvm.spec
+&lt;/code>&lt;/pre>&lt;p>以上命令通过选项禁用了编译后的 &lt;code>test&lt;/code> 以及 &lt;code>debuginfo&lt;/code> 包的编译以便节约时间. 如果没有意外的话以上命令正常结束后会在 &lt;code> $HOME/rpmbuild/RPMS/$(uname -m)&lt;/code> 目录下生成所有编译好的 &lt;code>rpm&lt;/code> 包. 对于该目录下的 &lt;code>RPM&lt;/code> 包我们可以选择性的安装也可以全部安装:&lt;/p>
+&lt;pre tabindex="0">&lt;code>cd $HOME/rpmbuild/RPMS/$(uname -m)
+yum localinstall -y ./*.rpm
+&lt;/code>&lt;/pre>&lt;p>也可将以上 &lt;code>RPM&lt;/code> 包分发到其他 &lt;code>CentOS 8&lt;/code> 的机器上安装.&lt;/p>
+&lt;h1 id="补充">补充&lt;/h1>
+&lt;p>在完成 &lt;code>RPM&lt;/code> 编译后最好先确认下是否已将 &lt;code>apple&lt;/code> 和 &lt;code>vmxnet3&lt;/code> 设备的支持编译进去:&lt;/p>
+&lt;pre tabindex="0">&lt;code>export QEMU_VERSION=&amp;#34;6.0.0&amp;#34;
+cd $HOME/rpmbuild
+BUILD/qemu-${QEMU_VERSION}/qemu_kvm_build/qemu-system-x86_64 -device help | egrep -i &amp;#34;apple|vmxnet3&amp;#34;
+&lt;/code>&lt;/pre>&lt;p>如果没有问题的话会看到包含 &lt;code>isa-applesmc&lt;/code> 和 &lt;code>vmxnet3&lt;/code> 的两行输出.&lt;/p>
+&lt;p>另外一个问题是当前编译后的 &lt;code>RPM&lt;/code> 包内没有包含 &lt;code>vmxnet3&lt;/code> 的 &lt;code>rom&lt;/code> 文件, 因此需要收到拷贝一下:&lt;/p>
+&lt;pre tabindex="0">&lt;code>export QEMU_VERSION=&amp;#34;6.0.0&amp;#34;
+cd $HOME/rpmbuild
+cp BUILD/qemu-${QEMU_VERSION}/pc-bios/efi-vmxnet3.rom /usr/share/qemu-kvm
+&lt;/code>&lt;/pre>&lt;p>此时在创建虚拟机时便可指定网卡类型为 &lt;code>vmxnet3&lt;/code> 了.&lt;/p>
+&lt;h2 id="再补充">再补充&lt;/h2>
+&lt;p>对于以上需要修改 &lt;code>patch&lt;/code> 文件的步骤可以直接使用以下命令:&lt;/p>
+&lt;pre tabindex="0">&lt;code>export PATCH_FILE=&amp;#34;/tmp/devices-$(uuidgen).patch&amp;#34;
+cd $HOME/rpmbuild
+cat &amp;gt; &amp;#34;${PATCH_FILE}&amp;#34; &amp;lt;&amp;lt; EOF
+--- SOURCES/0006-Enable-disable-devices-for-RHEL.patch 2021-09-17 21:43:45.000000000 +0800
++++ 0006-Enable-disable-devices-for-RHEL.patch 2023-04-07 18:05:42.535508928 +0800
+@@ -319,7 +319,7 @@
+index 0000000000..9f41400530
+--- /dev/null
++++ b/default-configs/devices/x86_64-rh-devices.mak
+-@@ -0,0 +1,104 @@
++@@ -0,0 +1,106 @@
++include rh-virtio.mak
++
++CONFIG_AC97=y
+@@ -424,6 +424,8 @@
++CONFIG_TPM_TIS_ISA=y
++CONFIG_TPM_EMULATOR=y
++CONFIG_TPM_PASSTHROUGH=y
+++CONFIG_APPLESMC=y
+++CONFIG_VMXNET3_PCI=y
+diff --git a/default-configs/devices/x86_64-softmmu.mak b/default-configs/devices/x86_64-softmmu.mak
+index 64b2ee2960..e57bcff7d9 100644
+--- a/default-configs/devices/x86_64-softmmu.mak
+EOF
+patch SOURCES/0006-Enable-disable-devices-for-RHEL.patch &amp;#34;${PATCH_FILE}&amp;#34;
+&lt;/code>&lt;/pre></content></item><item><title>书</title><link>https://blog.liloew.in/books/</link><pubDate>Mon, 27 Feb 2023 21:27:35 +0800</pubDate><guid>https://blog.liloew.in/books/</guid><description/><content/></item><item><title>Spring Boot 项目下载文件接口问题</title><link>https://blog.liloew.in/posts/spring-boot-file-download-with-multi-thread/</link><pubDate>Sun, 26 Feb 2023 21:26:48 +0800</pubDate><guid>https://blog.liloew.in/posts/spring-boot-file-download-with-multi-thread/</guid><description>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>今天组内研发同学报告说项目中有一个模块提供了文件下载的接口, 在实际使用中遇到有客户使用 &lt;code>迅雷&lt;/code> 进行离线下载的情况, 同时模块中针对文件下载的接口做了 &lt;code>AOP&lt;/code> 切面进行计费统计. 而 &lt;code>迅雷&lt;/code> 会针对该接口进行多线程并发下载, 同时即使退出 &lt;code>迅雷&lt;/code>, &lt;code>迅雷&lt;/code> 还会继续发起对文件下载接口的调用. 于是便抽空大致看了下项目内的代码, 出问题的接口功能也比较简单, 并没有很复杂的逻辑. 其大致实现如下:&lt;/p></description><content>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>今天组内研发同学报告说项目中有一个模块提供了文件下载的接口, 在实际使用中遇到有客户使用 &lt;code>迅雷&lt;/code> 进行离线下载的情况, 同时模块中针对文件下载的接口做了 &lt;code>AOP&lt;/code> 切面进行计费统计. 而 &lt;code>迅雷&lt;/code> 会针对该接口进行多线程并发下载, 同时即使退出 &lt;code>迅雷&lt;/code>, &lt;code>迅雷&lt;/code> 还会继续发起对文件下载接口的调用. 于是便抽空大致看了下项目内的代码, 出问题的接口功能也比较简单, 并没有很复杂的逻辑. 其大致实现如下:&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-Java" data-lang="Java">&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@ApiOperation&lt;/span>&lt;span style="color:#f92672">(&lt;/span>value &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#e6db74">&amp;#34;下载文件模板&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
