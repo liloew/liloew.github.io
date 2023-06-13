@@ -25,7 +25,7 @@
   mesa-libgbm-devel libxkbcommon-devel
 </code></pre><p>此时编译前的环境已经准备就绪了, 但因为 <code>RedHat</code> 在构建 <code>qemu</code> 时移除了一些虚拟设备, 因此我们还需要进一步修改刚刚得到的 <code>$HOME/rpmbuild</code> 目录下的问题. 具体修改的文件为 <code>$HOME/rpmbuild/SOURCES/0006-Enable-disable-devices-for-RHEL.patch</code>, 主要是添加以下内容:</p><pre tabindex=0><code>CONFIG_APPLESMC=y
 CONFIG_VMXNET3_PCI=y
-</code></pre><p>这里在增加 <code>APPLESMC</code> 支持以外还同时增加了 <code>vmxnet3</code> 虚拟网卡设备主要原因在于相较于 <code>E1000/E1000E</code> 而言 <code>vmxnet3</code> 可以提供更好的性能, 不使用 <code>virtio</code> 的原因则是 <code>macOS</code> 当前对 <code>virtio</code> 的支持还不太确定而 <code>vmxnet3</code> 则是官方支持的. 另外由于我们是直接修改 <code>patch</code> 文件, 因此需要遵守 <code>patch</code> 文件格式规范, 以上只是主要修改的内容. 如果修改没有问题此时我们执行以下命令进行编译:</p><pre tabindex=0><code>cd $HOME/rpmbuild
+</code></pre><p>这里在增加 <code>APPLESMC</code> 支持以外还同时增加了 <code>vmxnet3</code> 虚拟网卡设备主要原因在于相较于 <code>E1000/E1000E</code> 而言 <code>vmxnet3</code> 可以提供更好的性能, 不使用 <code>virtio</code> 的原因则是 <code>macOS</code> 当前对 <code>virtio</code> 的支持还不太确定, 而 <code>vmxnet3</code> 则是官方支持的. 另外由于我们是直接修改 <code>patch</code> 文件, 因此需要遵守 <code>patch</code> 文件格式规范, 以上只是主要修改的内容. 如果修改没有问题此时我们执行以下命令进行编译:</p><pre tabindex=0><code>cd $HOME/rpmbuild
 rpmbuild --nocheck --define &#34;debug_package %{nil}&#34; -bb SPECS/qemu-kvm.spec
 </code></pre><p>以上命令通过选项禁用了编译后的 <code>test</code> 以及 <code>debuginfo</code> 包的编译以便节约时间. 如果没有意外的话以上命令正常结束后会在 <code>$HOME/rpmbuild/RPMS/$(uname -m)</code> 目录下生成所有编译好的 <code>rpm</code> 包. 对于该目录下的 <code>RPM</code> 包我们可以选择性的安装也可以全部安装:</p><pre tabindex=0><code>cd  $HOME/rpmbuild/RPMS/$(uname -m)
 yum localinstall -y ./*.rpm
