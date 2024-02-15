@@ -1,0 +1,200 @@
+<!doctype html><html lang=cn><head><title>DHCP 协议分析及实现 - Ⅱ :: liloew 在写字</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="前一篇文章介绍了 DHCP 协议定义以及相关信令直接的流转, 本文主要通过 Rust 从头实现一个 DHCP 协议客户端.
+环境准备 首先需要安装 Rust, 目前 Rust 官方主要提供 Rustup 这一工具管理 Rust 各版本. 如果是 Windows 可直接下载 Rustup-init.exe 运行即可, 如果是 Linux 或 macOS 则可在 Shell 中运行一下命令快速安装:
+curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh Rustup 在安装 Rust 同时也会同时安装 Cargo 这一构建和包管理工具, 相对于 C/C++ 而言极大地减轻依赖和构建管理的心智负担.
+在安装完 Rust 和 Cargo 后由于涉及到网络报文, 因此还建议安装 Wireshark(Linux 环境下使用 tcpdump 亦可)以便后续对报文进行分析.
+IDE 可以选择 VS Code 或 JetBrains 新发布的 RustRover, 如果选择 VS Code 的话为了进行调试还需同时安装 CodeLLDB 插件.
+"><meta name=keywords content><meta name=robots content="noodp"><link rel=canonical href=https://blog.liloew.in/posts/rust-implementation-dhcp-2/><link rel=stylesheet href=https://blog.liloew.in/styles.css><link rel="shortcut icon" href=https://blog.liloew.in/img/theme-colors/green.png><link rel=apple-touch-icon href=https://blog.liloew.in/img/theme-colors/green.png><meta name=twitter:card content="summary"><meta name=twitter:site content><meta name=twitter:creator content><meta property="og:locale" content="cn"><meta property="og:type" content="article"><meta property="og:title" content="DHCP 协议分析及实现 - Ⅱ"><meta property="og:description" content="前一篇文章介绍了 DHCP 协议定义以及相关信令直接的流转, 本文主要通过 Rust 从头实现一个 DHCP 协议客户端.
+环境准备 首先需要安装 Rust, 目前 Rust 官方主要提供 Rustup 这一工具管理 Rust 各版本. 如果是 Windows 可直接下载 Rustup-init.exe 运行即可, 如果是 Linux 或 macOS 则可在 Shell 中运行一下命令快速安装:
+curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh Rustup 在安装 Rust 同时也会同时安装 Cargo 这一构建和包管理工具, 相对于 C/C++ 而言极大地减轻依赖和构建管理的心智负担.
+在安装完 Rust 和 Cargo 后由于涉及到网络报文, 因此还建议安装 Wireshark(Linux 环境下使用 tcpdump 亦可)以便后续对报文进行分析.
+IDE 可以选择 VS Code 或 JetBrains 新发布的 RustRover, 如果选择 VS Code 的话为了进行调试还需同时安装 CodeLLDB 插件.
+"><meta property="og:url" content="https://blog.liloew.in/posts/rust-implementation-dhcp-2/"><meta property="og:site_name" content="liloew 在写字"><meta property="og:image" content="https://blog.liloew.in/img/favicon/green.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627"><meta property="article:published_time" content="2023-11-03 21:03:41 +0800 +0800"></head><body class=green><div class="container center headings--one-size"><header class=header><div class=header__inner><div class=header__logo><a href=/><div class=logo>Terminal</div></a></div><ul class="menu menu--mobile"><li class=menu__trigger>Menu&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=/books>书</a></li><li><a href=/about>关于</a></li><hr><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul><ul class="menu menu--desktop menu--language-selector"><li class=menu__trigger>简中&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul></div><nav class=navigation-menu><ul class="navigation-menu__inner menu--desktop"><li><a href=/books>书</a></li><li><a href=/about>关于</a></li></ul></nav></header><div class=content><article class=post><h1 class=post-title><a href=https://blog.liloew.in/posts/rust-implementation-dhcp-2/>DHCP 协议分析及实现 - Ⅱ</a></h1><div class=post-meta><time class=post-date>2023-11-03 ::</time></div><span class=post-tags>#<a href=https://blog.liloew.in/tags/rust/>Rust</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/dhcp/>DHCP</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/bytes/>bytes</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/tokio/>tokio</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/async/>async</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/await/>await</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/protocol/>protocol</a>&nbsp;</span><div class=post-content><div><p><a href=/posts/rust-implementation-dhcp-1/>前一篇文章</a>介绍了 <code>DHCP</code> 协议定义以及相关信令直接的流转, 本文主要通过 <code>Rust</code> 从头实现一个 <code>DHCP</code> 协议客户端.</p><h2 id=环境准备>环境准备<a href=#环境准备 class=hanchor arialabel=Anchor>&#8983;</a></h2><p>首先需要安装 <code>Rust</code>, 目前 <code>Rust</code> 官方主要提供 <code>Rustup</code> 这一工具管理 <code>Rust</code> 各版本. 如果是 <code>Windows</code> 可直接下载 <code>Rustup-init.exe</code> 运行即可, 如果是 <code>Linux</code> 或 <code>macOS</code> 则可在 <code>Shell</code> 中运行一下命令快速安装:</p><pre tabindex=0><code>curl --proto &#39;=https&#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+</code></pre><p><code>Rustup</code> 在安装 <code>Rust</code> 同时也会同时安装 <code>Cargo</code> 这一构建和包管理工具, 相对于 <code>C/C++</code> 而言极大地减轻依赖和构建管理的心智负担.</p><p>在安装完 <code>Rust</code> 和 <code>Cargo</code> 后由于涉及到网络报文, 因此还建议安装 <code>Wireshark</code>(<code>Linux</code> 环境下使用 <code>tcpdump</code> 亦可)以便后续对报文进行分析.</p><p><code>IDE</code> 可以选择 <code>VS Code</code> 或 <code>JetBrains</code> 新发布的 <code>RustRover</code>, 如果选择 <code>VS Code</code> 的话为了进行调试还需同时安装 <code>CodeLLDB</code> 插件.</p><h2 id=开发>开发<a href=#开发 class=hanchor arialabel=Anchor>&#8983;</a></h2><p>我们首先通过 <code>cargo new inode-rs</code> 新建一个项目, 其中 <code>inode-rs</code> 是项目名称. 为便于项目管理 <code>Cargo</code> 为我们提供了 <code>workspace</code> 的概念, 此处我们在 <code>inode-rs</code> 下新建 <code>packet</code> 和 <code>cli</code> 两个子项目. 此时项目结构看起来像这样:</p><pre tabindex=0><code>.
+├── Cargo.toml
+├── cli
+└── packet
+</code></pre><p>为了后续开发我们还需要至少添加 <code>bytes</code>, <code>pnet</code> 和 <code>tokio</code> 依赖. 其中 <code>bytes</code> 主要用于二进制报文的读写, <code>pnet</code> 可用于获取本机网卡信息, <code>tokio</code> 是一个异步运行时库, 我们使用其提供的 <code>async/await</code> 运行环境简化异步和多线程操作.</p><p>我们在 <code>packet</code> 子项目下依次定义子 <code>mod</code> 为 <code>udp</code> 并在 <code>udp</code> 模块下定义 <code>dhcp</code> 模块, 最终文件结构为 <code>packet/udp/dhcp.rs</code>. 在 <code>dhcp.rs</code> 内定义具体的数据结构.</p><p>依据 <code>RFC 2132</code> 中关于 <code>options</code> 章节我们首先定义一个 <code>DHCP Message Type</code> 消息类型的枚举:</p><pre tabindex=0><code>#[derive(Debug, Clone, Copy)]
+pub enum DHCPMessageType {
+    DHCPDISCOVER = 0x01,
+    DHCPOFFER = 0x02,
+    DHCPREQUEST = 0x03,
+    DHCPDECLINE = 0x04,
+    DHCPACK = 0x05,
+    DHCPNAK = 0x06,
+    DHCPRELEASE = 0x07,
+    DHCPINFORM = 0x08,
+}
+</code></pre><p>同样, 依据 <code>RFC 2131</code> 中关于报文格式章节我们首先定义 <code>op</code> 枚举:</p><pre tabindex=0><code>#[derive(Debug, Clone, Copy, Default)]
+pub enum DHCPOP {
+    #[default]
+    BOOTREQUEST = 0x01,
+    BOOTREPLY = 0x02,
+}
+</code></pre><p>此处 <code>DHCPOP</code> 枚举由于在网络传输过程中需要序列化为 <code>u8</code>, 在客户端接收到报文后再将对应的 <code>u8</code> 数值反序列化为 <code>DHCPOP</code> 枚举, 因此我们需要实现 <code>Into</code> 和 <code>From</code> 两个 <code>Trait</code>:</p><pre tabindex=0><code>impl Into&lt;DHCPOP&gt; for u8 {
+    fn into(self) -&gt; DHCPOP {
+        match self {
+            0x01 =&gt; DHCPOP::BOOTREQUEST,
+            0x02 =&gt; DHCPOP::BOOTREPLY,
+            _ =&gt; DHCPOP::BOOTREQUEST,
+        }
+    }
+}
+
+impl From&lt;DHCPOP&gt; for u8 {
+    fn from(value: DHCPOP) -&gt; Self {
+        value as u8
+    }
+}
+</code></pre><p>在实现 <code>Into</code> <code>Trait</code> 时我们使用了 <code>match</code> <code>模式匹配</code>. 当前 <code>Rust</code> 要求针对 <code>match</code> 模式匹配必须是 <code>穷举</code> 的 - 即必须保护所有可能情况, 因此在对 <code>u8</code> 进行匹配时由于我们只关注 <code>0x01</code> 和 <code>0x02</code> 两种场景, 针对其他情况统一使用 <code>_</code> 进行匹配并返回一个默认的 <code>DHCPOP::BOOTREQUEST</code>.</p><p><em>其他一些类似的枚举我们不在反复展示.</em></p><p>在定义了必要的一些 <code>enum</code> 后我们再定义一个 <code>DHCPDiscover</code> 结构体:</p><pre tabindex=0><code>#[derive(Debug, Clone)]
+pub struct DHCPDiscover {
+    pub op: DHCPOP,
+    pub htype: DHCPHType,
+    pub hlen: DHCPHLen,
+    pub hops: u8,
+    pub xid: u32,
+    pub secs: u16,
+    pub flags: u16,
+    pub ciaddr: u32,
+    pub yiaddr: u32,
+    pub siaddr: u32,
+    pub giaddr: u32,
+    pub chaddr: [u8; 16],
+    pub sname: [u8; 64],
+    pub file: [u8; 128],
+    pub options: Vec&lt;u8&gt;,
+}
+</code></pre><p>同时为 <code>DHCPDiscover</code> 实现 <code>Default</code> <code>Trait</code>:</p><pre tabindex=0><code>impl Default for DHCPDiscover {
+    fn default() -&gt; Self {
+        DHCPDiscover {
+            op: DHCPOP::BOOTREQUEST,
+            htype: DHCPHType::ETHERNET,
+            hlen: DHCPHLen::ETHERNET,
+            hops: 0x00,
+            xid: 0x00000000,
+            secs: 0x0000,
+            flags: 0x0000,
+            ciaddr: 0x00000000,
+            yiaddr: 0x00000000,
+            siaddr: 0x00000000,
+            giaddr: 0x00000000,
+            chaddr: [0x00; 16],
+            sname: [0; 64],
+            file: [0; 128],
+            options: vec![99, 130, 83, 99],
+        }
+    }
+}
+</code></pre><p>在为 <code>DHCPDiscover</code> 实现 <code>Default</code> <code>Trait</code> 时我们为字段 <code>options</code> 预先存入了 <code>magic cookie</code> 即 <code>[99, 130, 83, 99]</code>(<code>10</code> 进制表示).</p><p>除了实现 <code>Default</code> <code>Trait</code> 我们同时还定义一个 <code>fn with_mac(mac: &str)</code> 的关联函数, 其作用是根据 <code>MAC</code> 地址初始化 <code>DHCPDiscover</code> 对象; 同时为了支持动态设置 <code>options</code> 字段, 我们为 <code>DHCPDiscover</code> 添加一个 <code>fn insert_options(&mut self, options: Vec&lt;DHCPOPTIONS>)</code> 方法, 该方法关联到 <code>DHCPDiscover</code> 的实例并可变(<code>mut</code>)借用其实例自身以更新相关属性:</p><pre tabindex=0><code>impl DHCPDiscover {
+    pub fn with_mac(mac: &amp;str) -&gt; Self {
+        let mut mac_addr: Vec&lt;u8&gt; = if mac.contains(&#34;-&#34;) {
+            str::split(mac, &#34;-&#34;)
+                .map(|u| u8::from_str_radix(u, 16).unwrap())
+                .collect()
+        } else {
+            str::split(mac, &#34;:&#34;)
+                .map(|u| u8::from_str_radix(u, 16).unwrap())
+                .collect()
+        };
+        mac_addr.resize(16, 0);
+        let mut discover = DHCPDiscover::default();
+        discover.chaddr = mac_addr.try_into().unwrap();
+        discover
+    }
+
+    pub fn insert_options(&amp;mut self, options: Vec&lt;DHCPOPTIONS&gt;) {
+        for ele in options.iter() {
+            self.options.push(ele.tp as u8);
+            self.options.push(ele.len);
+            self.options.extend(ele.va.clone());
+        }
+        self.options.push(0xff);
+    }
+}
+</code></pre><p>以上除了定义 <code>enum</code> 和 <code>struct</code> 外, 我们再定义一个 <code>DHCPBytes</code> <code>trait</code>:</p><pre tabindex=0><code>pub trait DHCPBytes {
+    fn to_bytes(&amp;self) -&gt; BytesMut;
+}
+</code></pre><p>并要求所有实现该 <code>trait</code> 的元素都必须实现 <code>to_bytes</code> 方法以便将对应元素转换为二进制 <code>bytes</code> 从而在 <code>UDP</code> 报文中进行传输. 其中 <code>BytesMut</code> 由 <code>bytes</code> 这个 <code>crate</code> 提供, 而 <code>bytes</code> 库主要在于提供高效的针对字节缓冲的操作. <code>Bytes</code> 作为一个高效的存储与操作连续内存空间的容器, 其设计的主要目标在于网络编码以及其他一些应用场景.</p><pre tabindex=0><code>impl DHCPBytes for DHCPDiscover {
+    fn to_bytes(&amp;self) -&gt; BytesMut {
+        let mut discover_bytes = BytesMut::new();
+        discover_bytes.put_u8(self.op as u8);
+        discover_bytes.put_u8(self.htype as u8);
+        discover_bytes.put_u8(self.hlen as u8);
+        discover_bytes.put_u8(self.hops);
+        discover_bytes.put_u32(self.xid);
+        discover_bytes.put_u16(self.secs);
+        discover_bytes.put_u16(self.flags);
+        discover_bytes.put_u32(self.ciaddr);
+        discover_bytes.put_u32(self.yiaddr);
+        discover_bytes.put_u32(self.siaddr);
+        discover_bytes.put_u32(self.giaddr);
+        for ele in self.chaddr.iter() {
+            discover_bytes.put_u8(*ele);
+        }
+        for ele in self.sname.iter() {
+            discover_bytes.put_u8(*ele);
+        }
+        for ele in self.file.iter() {
+            discover_bytes.put_u8(*ele);
+        }
+        for ele in self.options.iter() {
+            discover_bytes.put_u8(*ele);
+        }
+        discover_bytes
+    }
+}
+</code></pre><p>以上 <code>DHCPDiscover</code> 实现的 <code>DHCPBytes</code> 主要是按 <code>RFC 2131</code> 内定义的报文格式将对应字段转换为 <code>Bytes</code>. 另外像其中 <code>xid</code>, <code>secs</code> 和 <code>ciaddr</code> 等字段由于在标准中分别采用 <code>4</code>, <code>2</code> 和 <code>4</code> 字节, 分别对应了 <code>32</code>, <code>16</code> 和 <code>32</code> <code>BIT</code>, 因此为简化此处直接按对应 <code>BIT</code> 定义了无符整型数据.</p><p>在完成以上相关 <code>enum</code> 和 <code>struct</code> 定义的最后我们继续来实现 <code>main()</code> 方法:</p><pre tabindex=0><code>#[tokio::main]
+async fn main() -&gt; Result&lt;()&gt; {
+    let socket = UdpSocket::bind(&#34;0.0.0.0:68&#34;).await?;
+    let broadcast = socket.set_broadcast(true);
+    if let Ok(r) = broadcast {
+        println!(&#34;开启广播模式&#34;);
+    }
+    let mut buf = [0; 1024];
+    let mac = &#34;AC-48-78-43-C7-B8&#34;;
+    let mut v = vec![DHCPHType::ETHERNET as u8];
+    let a: Vec&lt;u8&gt; = str::split(mac, &#34;-&#34;)
+        .map(|u| u8::from_str_radix(u, 16).unwrap())
+        .collect();
+    v.extend_from_slice(&amp;a);
+    let parameter_request_list: Vec&lt;u8&gt; = vec![
+        DHCPOPTION::SubnetMask as u8,
+        DHCPOPTION::RouterOption as u8,
+        DHCPOPTION::DomainNameServerOption as u8,
+        DHCPOPTION::NetworkTimeProtocolServersOption as u8,
+    ];
+    let mut discovery_message = DHCPDiscover::with_mac(mac);
+    discovery_message.insert_options(vec![
+        DHCPOPTIONS {
+            tp: DHCPOPTION::DHCPMessageType,
+            len: 1,
+            va: vec![DHCPMessageType::DHCPDISCOVER as u8],
+        },
+        DHCPOPTIONS {
+            tp: DHCPOPTION::ClientIdentifier,
+            len: v.len() as u8,
+            va: v.clone(),
+        },
+        DHCPOPTIONS {
+            tp: DHCPOPTION::ParameterRequestList,
+            len: parameter_request_list.len() as u8,
+            va: parameter_request_list.clone(),
+        },
+    ]);
+    let tmp_bytes = discovery_message.to_bytes();
+
+    let broadcast_result = socket.send_to(&amp;tmp_bytes, &#34;255.255.255.255:67&#34;).await;
+    match broadcast_result {
+        Ok(n) =&gt; println!(&#34;发送数据包: {}&#34;, n),
+        Err(e) =&gt; println!(&#34;错误: {:?}&#34;, e),
+    }
+    Ok(())
+}
+</code></pre><p>首先通过 <code>UdpSocket::bind&lt;A: ToSocketAddrs>(addr: A)</code> 函数绑定到本机对应端口, 值得注意的是此处在调用 <code>bind</code> 函数时后跟了一个 <code>await?</code> 关键字, 这里的 <code>async/await</code> 是 <code>Rust</code> 提供的一个内置使得编写异步代码像同步代码一样的工具, <code>async</code> 会将相应的代码块转换为一种实现了 <code>Future</code> <code>Trait</code> 的状态机, 当调用 <code>await</code> 时具体的 <code>Runtime</code> 会挂起当前运行环境直至其返回结果 <code>Future</code> 准备好. <code>Rust</code> 并未在标准中提供 <code>async/await</code> 运行时, 因此我们需要通过 <code>crate</code> 添加对应依赖, 在此处我们使用 <code>tokio</code>.</p><p>以上我们同时还通过 <code>socket.set_broadcast(true)</code> 显示地将 <code>UDPSocket</code> 实例设置为广播模式, 在前一篇文章(<a href=/posts/rust-implementation-dhcp-1/>DHCP 协议分析及实现 - Ⅰ</a>)内我们也曾介绍过由于在 <code>DHCP</code> 协议通信之初 <code>客户端</code> 尚无具体 <code>IP</code> 地址切也不知道对应 <code>服务端</code> 所在网络中位置, 而这这好利用 <code>UDP</code> 的广播特性使得客户端向局域网广播 <code>DHCPDISCOVER</code> 报文. 对应地通过向 <code>255.255.255.255:67</code> 发送广播报文.</p><p>至此我们完成了初步的 <code>DHCP</code> 协议中 <code>DHCPDISCOVER</code> 协议的转换与广播, 后续还有包括 <code>DHCPOFFER</code>, <code>DHCPREQUEST</code> 和 <code>DHCPACK</code> 等消息的转换, 发送与解析我们不再赘述, 感兴趣的可以参考 <a href=https://github.com/liloew/inode-rs>liloew/inode-rs</a> 完整实现.</p><h2 id=ref>REF<a href=#ref class=hanchor arialabel=Anchor>&#8983;</a></h2><ol><li><a href=https://www.rust-lang.org/>Rust Programming Language</a></li><li><a href=https://tokio.rs/>Tokio - An asynchronous Rust runtime</a></li><li><a href=https://github.com/tokio-rs/bytes>tokio-rs/bytes</a></li><li><a href=https://github.com/liloew/inode-rs>liloew/inode-rs</a></li><li><a href=https://blog.liloew.in/posts/rust-implementation-dhcp-1/>DHCP 协议分析及实现 - Ⅰ</a></li></ol></div></div><div class=pagination><div class=pagination__title><span class=pagination__title-h>Read other posts</span><hr></div><div class=pagination__buttons><span class="button next"><a href=https://blog.liloew.in/posts/rust-implementation-dhcp-1/><span class=button__text>DHCP 协议分析及实现 - Ⅰ</span>
+<span class=button__icon>→</span></a></span></div></div></article></div><footer class=footer><div class=footer__inner><div class=copyright><span>© 2024 Powered by <a href=http://gohugo.io>Hugo</a></span>
+<span>:: <a href=https://github.com/panr/hugo-theme-terminal target=_blank>Theme</a> made by <a href=https://github.com/panr target=_blank>panr</a></span></div></div></footer><script type=text/javascript src=/bundle.min.js></script></div></body></html>
