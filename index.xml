@@ -51,21 +51,21 @@
 | |
 | options (variable) |
 +---------------------------------------------------------------+
-&lt;/code>&lt;/pre>&lt;p>&lt;code>op&lt;/code> 字段定义了消息的方向 &lt;code>1&lt;/code> 为 &lt;code>客户端&lt;/code> 向 &lt;code>服务端&lt;/code> 发生请求, &lt;code>2&lt;/code> 则为 &lt;code>服务端&lt;/code> 发回的响应.
-&lt;code>htype&lt;/code> 字段定义了 &lt;code>硬件地址类型&lt;/code>, &lt;code>1&lt;/code> 为 &lt;code>10mb&lt;/code> 以太网, 具体定义可参见 &lt;code>RFC 1700&lt;/code>, 在 &lt;code>DHCP&lt;/code> 中一般使用 &lt;code>1&lt;/code>.
-&lt;code>hlen&lt;/code> 字段表示 &lt;code>硬件地址长度&lt;/code>, 依据 &lt;code>htype&lt;/code> 定义当 &lt;code>htype&lt;/code> 为 &lt;code>1&lt;/code>, 即 &lt;code>以太网&lt;/code> 时, 该字段为 &lt;code>6&lt;/code>, 也即 &lt;code>MAC&lt;/code> 地址长度.
-&lt;code>hops&lt;/code> 字段表示 &lt;code>DHCP&lt;/code> 协议经过的节点数, 客户端在初始发送 &lt;code>DHCP&lt;/code> 请求时将其设置为 &lt;code>0&lt;/code>, &lt;code>DHCP&lt;/code> 协议的 &lt;code>中继&lt;/code> 节点可选地增加该字段的值.
-&lt;code>xid&lt;/code> 字段表示 &lt;code>事务 ID&lt;/code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.
-&lt;code>secs&lt;/code> 字段为客户端获取 &lt;code>IP&lt;/code> 到进行地址 &lt;code>续约&lt;/code> 时所经历的秒数.
-&lt;code>flags&lt;/code> 字段当前在 &lt;code>DHCP&lt;/code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 &lt;code>DHCP&lt;/code> &lt;code>服务端&lt;/code> 或 &lt;code>中继&lt;/code> 节点是否将广播信息发送到客户端所在的子网.
-&lt;code>ciaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>, 仅当客户端在 &lt;code>BOUND&lt;/code>, &lt;code>RENEW&lt;/code> 或者 &lt;code>REBINDING&lt;/code> 状态时才填充该字段.
-&lt;code>yiaddr&lt;/code> 字段表示 &lt;code>your&lt;/code> &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>.
-&lt;code>siaddr&lt;/code> 字段为下一 &lt;code>服务端&lt;/code> 节点 &lt;code>IP&lt;/code>, 仅当在 &lt;code>DHCPOFFER&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 请求中填充该字段.
-&lt;code>giaddr&lt;/code> 字段为 &lt;code>中继节点&lt;/code> &lt;code>IP 地址&lt;/code>.
-&lt;code>chaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>硬件地址&lt;/code>, 一般为 &lt;code>MAC 地址&lt;/code>.
-&lt;code>sname&lt;/code> 字段为可选的 &lt;code>服务器主机名&lt;/code>, 并且以 &lt;code>null&lt;/code> 字符串结束, 也即 &lt;code>0x00&lt;/code>.
-&lt;code>file&lt;/code> 字段为 &lt;code>启动文件名&lt;/code>, 在 &lt;code>DHCPDISCOVER&lt;/code> 消息中以常规文件名或 &lt;code>null&lt;/code> 表示, 在 &lt;code>DHCPOFFER&lt;/code> 消息中以全限定路径名表示.
-&lt;code>options&lt;/code> 字段是变长的可选项. 其中首 4 位为固定的 &lt;code>magic cookie&lt;/code> - [0x63, 0x82, 0x53, 0x63].&lt;/p>
+&lt;/code>&lt;/pre>&lt;p>&lt;code>op&lt;/code> 字段定义了消息的方向 &lt;code>1&lt;/code> 为 &lt;code>客户端&lt;/code> 向 &lt;code>服务端&lt;/code> 发生请求, &lt;code>2&lt;/code> 则为 &lt;code>服务端&lt;/code> 发回的响应.&lt;/p>
+&lt;p>&lt;code>htype&lt;/code> 字段定义了 &lt;code>硬件地址类型&lt;/code>, &lt;code>1&lt;/code> 为 &lt;code>10mb&lt;/code> 以太网, 具体定义可参见 &lt;code>RFC 1700&lt;/code>, 在 &lt;code>DHCP&lt;/code> 中一般使用 &lt;code>1&lt;/code>.&lt;/p>
+&lt;p>&lt;code>hlen&lt;/code> 字段表示 &lt;code>硬件地址长度&lt;/code>, 依据 &lt;code>htype&lt;/code> 定义当 &lt;code>htype&lt;/code> 为 &lt;code>1&lt;/code>, 即 &lt;code>以太网&lt;/code> 时, 该字段为 &lt;code>6&lt;/code>, 也即 &lt;code>MAC&lt;/code> 地址长度.&lt;/p>
+&lt;p>&lt;code>hops&lt;/code> 字段表示 &lt;code>DHCP&lt;/code> 协议经过的节点数, 客户端在初始发送 &lt;code>DHCP&lt;/code> 请求时将其设置为 &lt;code>0&lt;/code>, &lt;code>DHCP&lt;/code> 协议的 &lt;code>中继&lt;/code> 节点可选地增加该字段的值.&lt;/p>
+&lt;p>&lt;code>xid&lt;/code> 字段表示 &lt;code>事务 ID&lt;/code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.&lt;/p>
+&lt;p>&lt;code>secs&lt;/code> 字段为客户端获取 &lt;code>IP&lt;/code> 到进行地址 &lt;code>续约&lt;/code> 时所经历的秒数.&lt;/p>
+&lt;p>&lt;code>flags&lt;/code> 字段当前在 &lt;code>DHCP&lt;/code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 &lt;code>DHCP&lt;/code> &lt;code>服务端&lt;/code> 或 &lt;code>中继&lt;/code> 节点是否将广播信息发送到客户端所在的子网.&lt;/p>
+&lt;p>&lt;code>ciaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>, 仅当客户端在 &lt;code>BOUND&lt;/code>, &lt;code>RENEW&lt;/code> 或者 &lt;code>REBINDING&lt;/code> 状态时才填充该字段.&lt;/p>
+&lt;p>&lt;code>yiaddr&lt;/code> 字段表示 &lt;code>your&lt;/code> &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
+&lt;p>&lt;code>siaddr&lt;/code> 字段为下一 &lt;code>服务端&lt;/code> 节点 &lt;code>IP&lt;/code>, 仅当在 &lt;code>DHCPOFFER&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 请求中填充该字段.&lt;/p>
+&lt;p>&lt;code>giaddr&lt;/code> 字段为 &lt;code>中继节点&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
+&lt;p>&lt;code>chaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>硬件地址&lt;/code>, 一般为 &lt;code>MAC 地址&lt;/code>.&lt;/p>
+&lt;p>&lt;code>sname&lt;/code> 字段为可选的 &lt;code>服务器主机名&lt;/code>, 并且以 &lt;code>null&lt;/code> 字符串结束, 也即 &lt;code>0x00&lt;/code>.&lt;/p>
+&lt;p>&lt;code>file&lt;/code> 字段为 &lt;code>启动文件名&lt;/code>, 在 &lt;code>DHCPDISCOVER&lt;/code> 消息中以常规文件名或 &lt;code>null&lt;/code> 表示, 在 &lt;code>DHCPOFFER&lt;/code> 消息中以全限定路径名表示.&lt;/p>
+&lt;p>&lt;code>options&lt;/code> 字段是变长的可选项. 其中首 4 位为固定的 &lt;code>magic cookie&lt;/code> - [0x63, 0x82, 0x53, 0x63].&lt;/p>
 &lt;pre tabindex="0">&lt;code> Server Client Server
 (not selected) (selected)
 v v v

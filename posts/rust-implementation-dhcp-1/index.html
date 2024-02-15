@@ -48,21 +48,7 @@ iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务�
    |                                                               |
    |                          options (variable)                   |
    +---------------------------------------------------------------+
-</code></pre><p><code>op</code> 字段定义了消息的方向 <code>1</code> 为 <code>客户端</code> 向 <code>服务端</code> 发生请求, <code>2</code> 则为 <code>服务端</code> 发回的响应.
-<code>htype</code> 字段定义了 <code>硬件地址类型</code>, <code>1</code> 为 <code>10mb</code> 以太网, 具体定义可参见 <code>RFC 1700</code>, 在 <code>DHCP</code> 中一般使用 <code>1</code>.
-<code>hlen</code> 字段表示 <code>硬件地址长度</code>, 依据 <code>htype</code> 定义当 <code>htype</code> 为 <code>1</code>, 即 <code>以太网</code> 时, 该字段为 <code>6</code>, 也即 <code>MAC</code> 地址长度.
-<code>hops</code> 字段表示 <code>DHCP</code> 协议经过的节点数, 客户端在初始发送 <code>DHCP</code> 请求时将其设置为 <code>0</code>, <code>DHCP</code> 协议的 <code>中继</code> 节点可选地增加该字段的值.
-<code>xid</code> 字段表示 <code>事务 ID</code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.
-<code>secs</code> 字段为客户端获取 <code>IP</code> 到进行地址 <code>续约</code> 时所经历的秒数.
-<code>flags</code> 字段当前在 <code>DHCP</code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 <code>DHCP</code> <code>服务端</code> 或 <code>中继</code> 节点是否将广播信息发送到客户端所在的子网.
-<code>ciaddr</code> 字段为 <code>客户端</code> <code>IP 地址</code>, 仅当客户端在 <code>BOUND</code>, <code>RENEW</code> 或者 <code>REBINDING</code> 状态时才填充该字段.
-<code>yiaddr</code> 字段表示 <code>your</code> <code>客户端</code> <code>IP 地址</code>.
-<code>siaddr</code> 字段为下一 <code>服务端</code> 节点 <code>IP</code>, 仅当在 <code>DHCPOFFER</code> 和 <code>DHCPACK</code> 请求中填充该字段.
-<code>giaddr</code> 字段为 <code>中继节点</code> <code>IP 地址</code>.
-<code>chaddr</code> 字段为 <code>客户端</code> <code>硬件地址</code>, 一般为 <code>MAC 地址</code>.
-<code>sname</code> 字段为可选的 <code>服务器主机名</code>, 并且以 <code>null</code> 字符串结束, 也即 <code>0x00</code>.
-<code>file</code> 字段为 <code>启动文件名</code>, 在 <code>DHCPDISCOVER</code> 消息中以常规文件名或 <code>null</code> 表示, 在 <code>DHCPOFFER</code> 消息中以全限定路径名表示.
-<code>options</code> 字段是变长的可选项. 其中首 4 位为固定的 <code>magic cookie</code> - [0x63, 0x82, 0x53, 0x63].</p><pre tabindex=0><code>                Server          Client          Server
+</code></pre><p><code>op</code> 字段定义了消息的方向 <code>1</code> 为 <code>客户端</code> 向 <code>服务端</code> 发生请求, <code>2</code> 则为 <code>服务端</code> 发回的响应.</p><p><code>htype</code> 字段定义了 <code>硬件地址类型</code>, <code>1</code> 为 <code>10mb</code> 以太网, 具体定义可参见 <code>RFC 1700</code>, 在 <code>DHCP</code> 中一般使用 <code>1</code>.</p><p><code>hlen</code> 字段表示 <code>硬件地址长度</code>, 依据 <code>htype</code> 定义当 <code>htype</code> 为 <code>1</code>, 即 <code>以太网</code> 时, 该字段为 <code>6</code>, 也即 <code>MAC</code> 地址长度.</p><p><code>hops</code> 字段表示 <code>DHCP</code> 协议经过的节点数, 客户端在初始发送 <code>DHCP</code> 请求时将其设置为 <code>0</code>, <code>DHCP</code> 协议的 <code>中继</code> 节点可选地增加该字段的值.</p><p><code>xid</code> 字段表示 <code>事务 ID</code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.</p><p><code>secs</code> 字段为客户端获取 <code>IP</code> 到进行地址 <code>续约</code> 时所经历的秒数.</p><p><code>flags</code> 字段当前在 <code>DHCP</code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 <code>DHCP</code> <code>服务端</code> 或 <code>中继</code> 节点是否将广播信息发送到客户端所在的子网.</p><p><code>ciaddr</code> 字段为 <code>客户端</code> <code>IP 地址</code>, 仅当客户端在 <code>BOUND</code>, <code>RENEW</code> 或者 <code>REBINDING</code> 状态时才填充该字段.</p><p><code>yiaddr</code> 字段表示 <code>your</code> <code>客户端</code> <code>IP 地址</code>.</p><p><code>siaddr</code> 字段为下一 <code>服务端</code> 节点 <code>IP</code>, 仅当在 <code>DHCPOFFER</code> 和 <code>DHCPACK</code> 请求中填充该字段.</p><p><code>giaddr</code> 字段为 <code>中继节点</code> <code>IP 地址</code>.</p><p><code>chaddr</code> 字段为 <code>客户端</code> <code>硬件地址</code>, 一般为 <code>MAC 地址</code>.</p><p><code>sname</code> 字段为可选的 <code>服务器主机名</code>, 并且以 <code>null</code> 字符串结束, 也即 <code>0x00</code>.</p><p><code>file</code> 字段为 <code>启动文件名</code>, 在 <code>DHCPDISCOVER</code> 消息中以常规文件名或 <code>null</code> 表示, 在 <code>DHCPOFFER</code> 消息中以全限定路径名表示.</p><p><code>options</code> 字段是变长的可选项. 其中首 4 位为固定的 <code>magic cookie</code> - [0x63, 0x82, 0x53, 0x63].</p><pre tabindex=0><code>                Server          Client          Server
             (not selected)                    (selected)
 
                   v               v               v
