@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>liloew 在写字</title><link>https://blog.liloew.in/</link><description>Recent content on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sun, 15 Oct 2023 14:58:16 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</link><pubDate>Sun, 15 Oct 2023 14:58:16 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</guid><description>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;pre tabindex="0">&lt;code>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
-&lt;/code>&lt;/pre>&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
+&lt;pre>&lt;code>&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
+&lt;/code>&lt;/pre>
+&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
 &lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p></description><content>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;pre tabindex="0">&lt;code>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
-&lt;/code>&lt;/pre>&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
+&lt;pre>&lt;code>&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
+&lt;/code>&lt;/pre>
+&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
 &lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p>
 &lt;h1 id="实现">实现&lt;/h1>
 &lt;p>&lt;code>DHCP&lt;/code> 协议前身是 &lt;code>BOOTP&lt;/code> 协议, 当前关于 &lt;code>DHCP&lt;/code> 最新的信息可在 &lt;code>RFC 2131&lt;/code> 中查阅, 另外 &lt;code>DHCPv6&lt;/code> 则可在 &lt;code>RFC 3315&lt;/code> 中定义. 不过本文当前仅讨论 &lt;code>DHCPv4&lt;/code>. &lt;code>DHCP&lt;/code> 全称 &lt;code>Dynamic Host Configuration Protocol&lt;/code>, 即 &lt;code>动态主机配置协议&lt;/code>, 是一种使网络管理员能够集中管理和自动分配 &lt;code>IP&lt;/code> 地址的通信协议. 在 &lt;code>IP&lt;/code> 网络中每个连接 &lt;code>Internet&lt;/code> 的设备都需要分配唯一的 &lt;code>IP&lt;/code> 地址, &lt;code>DHCP&lt;/code> 协议可使得网络管理员采用中心化的方式分配 &lt;code>IP&lt;/code> 地址, 并对 &lt;code>IP&lt;/code> 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 &lt;code>IP&lt;/code> 地址请求.&lt;/p>
@@ -168,8 +170,6 @@ to leasing server | | |
 &lt;/li>
 &lt;li>
 &lt;p>&lt;code>DHCP Message Type&lt;/code> 该选项编码为 &lt;code>53&lt;/code>, 其后在 &lt;code>Len&lt;/code> 内定义了 1 字节的数据体, 即 &lt;code>Type&lt;/code>, 而 &lt;code>Type&lt;/code> 在为 &lt;code>0x01 ~ 0x08&lt;/code> 若干种不同的 &lt;code>DHCP&lt;/code> 消息类型.&lt;/p>
-&lt;/li>
-&lt;/ol>
 &lt;pre tabindex="0">&lt;code> Value Message Type
 ----- ------------
 1 DHCPDISCOVER
@@ -184,23 +184,23 @@ Code Len Type
 +-----+-----+-----+
 | 53 | 1 | 1-9 |
 +-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;ol start="2">
-&lt;li>&lt;code>Client-identifier&lt;/code> 该选项编码为 &lt;code>61&lt;/code>, 其后在 &lt;code>Len&lt;/code> 内定义了 &lt;code>n&lt;/code> 字节长度的数据体, 其中包含 &lt;code>Type&lt;/code> 1 字节和 &lt;code>Client-Identifier&lt;/code> &lt;code>n-1&lt;/code> 字节. 其中 &lt;code>Client-Identifier&lt;/code> 主要用于服务端在其数据库内鉴别查找客户端, 在 &lt;code>DHCP&lt;/code> 语义环境下 &lt;code>Type&lt;/code> 通常为 &lt;code>0x01&lt;/code> 即 &lt;code>硬件地址&lt;/code>（&lt;code>MAC&lt;/code>), 同时 &lt;code>Client-Identifier&lt;/code> 至少为 2 字节, 如果为 &lt;code>MAC&lt;/code> 地址的话则为 6 字节.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Client-identifier&lt;/code> 该选项编码为 &lt;code>61&lt;/code>, 其后在 &lt;code>Len&lt;/code> 内定义了 &lt;code>n&lt;/code> 字节长度的数据体, 其中包含 &lt;code>Type&lt;/code> 1 字节和 &lt;code>Client-Identifier&lt;/code> &lt;code>n-1&lt;/code> 字节. 其中 &lt;code>Client-Identifier&lt;/code> 主要用于服务端在其数据库内鉴别查找客户端, 在 &lt;code>DHCP&lt;/code> 语义环境下 &lt;code>Type&lt;/code> 通常为 &lt;code>0x01&lt;/code> 即 &lt;code>硬件地址&lt;/code>（&lt;code>MAC&lt;/code>), 同时 &lt;code>Client-Identifier&lt;/code> 至少为 2 字节, 如果为 &lt;code>MAC&lt;/code> 地址的话则为 6 字节.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len Type Client-Identifier
 +-----+-----+-----+-----+-----+---
 | 61 | n | t1 | i1 | i2 | ...
 +-----+-----+-----+-----+-----+---
-&lt;/code>&lt;/pre>&lt;ol start="3">
-&lt;li>&lt;code>Requested IP Address&lt;/code> 该选项用于客户端在 &lt;code>DHCPDISCOVER&lt;/code> 消息中向服务端请求指定的 &lt;code>IP&lt;/code>.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Requested IP Address&lt;/code> 该选项用于客户端在 &lt;code>DHCPDISCOVER&lt;/code> 消息中向服务端请求指定的 &lt;code>IP&lt;/code>.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len Address
 +-----+-----+-----+-----+-----+-----+
 | 50 | 4 | a1 | a2 | a3 | a4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;ol start="4">
-&lt;li>&lt;code>Parameter Request List&lt;/code> 该选项用于 &lt;code>DHCP&lt;/code> 客户端向服务端请求特定的配置.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Parameter Request List&lt;/code> 该选项用于 &lt;code>DHCP&lt;/code> 客户端向服务端请求特定的配置.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len Option Codes
 +-----+-----+-----+-----+---
 | 55 | n | c1 | c2 | ...
@@ -210,43 +210,42 @@ Code Len Type
 Router Option - 0x03
 Domain Name Server Option - 0x06
 Network Time Protocol Servers Option - 0x42
-&lt;/code>&lt;/pre>&lt;ol start="5">
-&lt;li>&lt;code>End Option&lt;/code> 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 &lt;code>RFC&lt;/code> 要求 &lt;code>options&lt;/code> 字段需填充至少 &lt;code>312&lt;/code> 且至多 &lt;code>576&lt;/code> 字节.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>End Option&lt;/code> 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 &lt;code>RFC&lt;/code> 要求 &lt;code>options&lt;/code> 字段需填充至少 &lt;code>312&lt;/code> 且至多 &lt;code>576&lt;/code> 字节.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code
 +-----+
 | 255 |
 +-----+
-&lt;/code>&lt;/pre>&lt;ol start="6">
-&lt;li>&lt;code>Pad Option&lt;/code> 该选项主要用于字段填充.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Pad Option&lt;/code> 该选项主要用于字段填充.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code
 +-----+
 | 0 |
 +-----+
-&lt;/code>&lt;/pre>&lt;ol start="7">
-&lt;li>&lt;code>Subnet Mask&lt;/code> 该选项用于指示客户端子网掩码, 其 &lt;code>Len&lt;/code> 为固定 4 字节(&lt;code>DHCPv4&lt;/code>), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 &lt;code>router option&lt;/code> 则 &lt;code>Subnet Mask&lt;/code> 应该位于前部.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Subnet Mask&lt;/code> 该选项用于指示客户端子网掩码, 其 &lt;code>Len&lt;/code> 为固定 4 字节(&lt;code>DHCPv4&lt;/code>), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 &lt;code>router option&lt;/code> 则 &lt;code>Subnet Mask&lt;/code> 应该位于前部.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len Subnet Mask
 +-----+-----+-----+-----+-----+-----+
 | 1 | 4 | m1 | m2 | m3 | m4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;ol start="8">
-&lt;li>&lt;code>Router Option&lt;/code> 该选项主要用于列举当前网络可路由的 &lt;code>IP&lt;/code> 地址, 同时其 &lt;code>Len&lt;/code> 最少为 4 且永远为 4 的倍数.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Router Option&lt;/code> 该选项主要用于列举当前网络可路由的 &lt;code>IP&lt;/code> 地址, 同时其 &lt;code>Len&lt;/code> 最少为 4 且永远为 4 的倍数.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len Address 1 Address 2
 +-----+-----+-----+-----+-----+-----+-----+-----+--
 | 3 | n | a1 | a2 | a3 | a4 | a1 | a2 | ...
 +-----+-----+-----+-----+-----+-----+-----+-----+--
-&lt;/code>&lt;/pre>&lt;ol start="9">
-&lt;li>&lt;code>Renewal (T1) Time Value&lt;/code> 该选项主要用于指示从客户端获取 &lt;code>IP&lt;/code> 地址到续期该 &lt;code>IP&lt;/code> 所需间隔时间. &lt;code>T1 Interval&lt;/code> 为 4 字节 32 位整数, 单位为 &lt;code>秒&lt;/code>.&lt;/li>
-&lt;/ol>
+&lt;/code>&lt;/pre>&lt;/li>
+&lt;li>
+&lt;p>&lt;code>Renewal (T1) Time Value&lt;/code> 该选项主要用于指示从客户端获取 &lt;code>IP&lt;/code> 地址到续期该 &lt;code>IP&lt;/code> 所需间隔时间. &lt;code>T1 Interval&lt;/code> 为 4 字节 32 位整数, 单位为 &lt;code>秒&lt;/code>.&lt;/p>
 &lt;pre tabindex="0">&lt;code> Code Len T1 Interval
 +-----+-----+-----+-----+-----+-----+
 | 58 | 4 | t1 | t2 | t3 | t4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;ol start="10">
-&lt;li>&lt;/li>
+&lt;/code>&lt;/pre>&lt;/li>
 &lt;/ol>
 &lt;h1 id="ref">REF&lt;/h1>
 &lt;ol>

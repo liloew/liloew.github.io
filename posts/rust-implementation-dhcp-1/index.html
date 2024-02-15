@@ -1,14 +1,14 @@
 <!doctype html><html lang=cn><head><title>DHCP 协议分析 :: liloew 在写字</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="背景 最近因工作需要接触了 H3C 的 iNode 客户端, 参考其官网对 iNode 的描述:
-iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。 以此为发端, 本来主要讨论 DHCP 协议的设计与实现, 以期最后通过修改 DHCP 协议实现 私有 的 DHCP 协议, 实现一定条件下限制网络访问的目的.
+&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。 以此为发端, 本来主要讨论 DHCP 协议的设计与实现, 以期最后通过修改 DHCP 协议实现 私有 的 DHCP 协议, 实现一定条件下限制网络访问的目的.
 同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.
 "><meta name=keywords content><meta name=robots content="noodp"><link rel=canonical href=https://blog.liloew.in/posts/rust-implementation-dhcp-1/><link rel=stylesheet href=https://blog.liloew.in/styles.css><link rel="shortcut icon" href=https://blog.liloew.in/img/theme-colors/green.png><link rel=apple-touch-icon href=https://blog.liloew.in/img/theme-colors/green.png><meta name=twitter:card content="summary"><meta name=twitter:site content><meta name=twitter:creator content><meta property="og:locale" content="cn"><meta property="og:type" content="article"><meta property="og:title" content="DHCP 协议分析"><meta property="og:description" content="背景 最近因工作需要接触了 H3C 的 iNode 客户端, 参考其官网对 iNode 的描述:
-iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。 以此为发端, 本来主要讨论 DHCP 协议的设计与实现, 以期最后通过修改 DHCP 协议实现 私有 的 DHCP 协议, 实现一定条件下限制网络访问的目的.
+&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。 以此为发端, 本来主要讨论 DHCP 协议的设计与实现, 以期最后通过修改 DHCP 协议实现 私有 的 DHCP 协议, 实现一定条件下限制网络访问的目的.
 同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.
 "><meta property="og:url" content="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"><meta property="og:site_name" content="liloew 在写字"><meta property="og:image" content="https://blog.liloew.in/img/favicon/green.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627"><meta property="article:published_time" content="2023-10-15 14:58:16 +0800 +0800"></head><body class=green><div class="container center headings--one-size"><header class=header><div class=header__inner><div class=header__logo><a href=/><div class=logo>Terminal</div></a></div><ul class="menu menu--mobile"><li class=menu__trigger>Menu&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=/books>书</a></li><li><a href=/about>关于</a></li><hr><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul><ul class="menu menu--desktop menu--language-selector"><li class=menu__trigger>简中&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul></div><nav class=navigation-menu><ul class="navigation-menu__inner menu--desktop"><li><a href=/books>书</a></li><li><a href=/about>关于</a></li></ul></nav></header><div class=content><article class=post><h1 class=post-title><a href=https://blog.liloew.in/posts/rust-implementation-dhcp-1/>DHCP 协议分析</a></h1><div class=post-meta><time class=post-date>2023-10-15 ::</time></div><span class=post-tags>#<a href=https://blog.liloew.in/tags/rust/>Rust</a>&nbsp;
 #<a href=https://blog.liloew.in/tags/dhcp/>DHCP</a>&nbsp;
 #<a href=https://blog.liloew.in/tags/bytes/>bytes</a>&nbsp;
 #<a href=https://blog.liloew.in/tags/rfc/>RFC</a>&nbsp;
-#<a href=https://blog.liloew.in/tags/protocol/>protocol</a>&nbsp;</span><div class=post-content><div><h1 id=背景>背景<a href=#背景 class=hanchor arialabel=Anchor>&#8983;</a></h1><p>最近因工作需要接触了 <code>H3C</code> 的 <code>iNode</code> 客户端, 参考其官网对 <code>iNode</code> 的描述:</p><pre tabindex=0><code>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
+#<a href=https://blog.liloew.in/tags/protocol/>protocol</a>&nbsp;</span><div class=post-content><div><h1 id=背景>背景<a href=#背景 class=hanchor arialabel=Anchor>&#8983;</a></h1><p>最近因工作需要接触了 <code>H3C</code> 的 <code>iNode</code> 客户端, 参考其官网对 <code>iNode</code> 的描述:</p><pre><code>&gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
 </code></pre><p>以此为发端, 本来主要讨论 <code>DHCP</code> 协议的设计与实现, 以期最后通过修改 <code>DHCP</code> 协议实现 <code>私有</code> 的 <code>DHCP</code> 协议, 实现一定条件下限制网络访问的目的.</p><p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.</p><h1 id=实现>实现<a href=#实现 class=hanchor arialabel=Anchor>&#8983;</a></h1><p><code>DHCP</code> 协议前身是 <code>BOOTP</code> 协议, 当前关于 <code>DHCP</code> 最新的信息可在 <code>RFC 2131</code> 中查阅, 另外 <code>DHCPv6</code> 则可在 <code>RFC 3315</code> 中定义. 不过本文当前仅讨论 <code>DHCPv4</code>. <code>DHCP</code> 全称 <code>Dynamic Host Configuration Protocol</code>, 即 <code>动态主机配置协议</code>, 是一种使网络管理员能够集中管理和自动分配 <code>IP</code> 地址的通信协议. 在 <code>IP</code> 网络中每个连接 <code>Internet</code> 的设备都需要分配唯一的 <code>IP</code> 地址, <code>DHCP</code> 协议可使得网络管理员采用中心化的方式分配 <code>IP</code> 地址, 并对 <code>IP</code> 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 <code>IP</code> 地址请求.</p><p>同时 <code>DHCP</code> 使用了 <code>租约</code> 的概念, 这使得在局域网中可以最大化地使用有限的 <code>IP</code> 地址资源, 同时 <code>DHCP</code> 也支持为计算机分配静态地址.</p><p><code>DHCP</code> 协议是一种基于 <code>UDP</code> 之上的应用层协议, 主要是因为在依据 <code>DHCP</code> 获取 <code>IP</code> 地址前计算机尚无有效的 <code>IP</code> 地址, 此时 <code>客户端</code> 可利用 <code>UDP</code> 的广播特性向局域网内广播 <code>DHCP</code> 报文, 同时 <code>DHCP 服务器</code> 亦采用广播的形式向局域网内响应对应请求. <code>DHCPv4</code> 定义了以下几种消息:
 <code>DHCPDISCOVER</code> 消息用于 <code>客户端</code> 广播以确定局域网内 <code>服务器</code>.
 <code>DHCPOFFER</code> 消息用于服务端响应客户端的 <code>DHCPDISCOVER</code> 消息并向客户端提供配置参数.
@@ -133,30 +133,30 @@ timers T1, T2   ------------  send DHCPREQUEST      |               |
                          +-&gt;| RENEWING |                            |
                             |          |----------------------------+
                              ----------
-</code></pre><h2 id=options>OPTIONS<a href=#options class=hanchor arialabel=Anchor>&#8983;</a></h2><p><code>options</code> 定义为 2 字节的 <code>Code</code> 和 1 字节的 <code>Len</code>, 而后则依据 <code>Len</code> 包含指定长度字节的数据体. 由于当前 <code>options</code> 众多当前仅列举一些比较重要的 <code>options</code>.</p><ol start=0><li><p><code>magic cookie</code>, 正如前文所述, 在 <code>DHCP</code> 报文内包含 4 字节的 <code>magic cookie</code>, 其值为 [0x63, 0x82, 0x53, 0x63].</p></li><li><p><code>DHCP Message Type</code> 该选项编码为 <code>53</code>, 其后在 <code>Len</code> 内定义了 1 字节的数据体, 即 <code>Type</code>, 而 <code>Type</code> 在为 <code>0x01 ~ 0x08</code> 若干种不同的 <code>DHCP</code> 消息类型.</p></li></ol><pre tabindex=0><code>           Value   Message Type
-           -----   ------------
-             1     DHCPDISCOVER
-             2     DHCPOFFER
-             3     DHCPREQUEST
-             4     DHCPDECLINE
-             5     DHCPACK
-             6     DHCPNAK
-             7     DHCPRELEASE
-             8     DHCPINFORM
+</code></pre><h2 id=options>OPTIONS<a href=#options class=hanchor arialabel=Anchor>&#8983;</a></h2><p><code>options</code> 定义为 2 字节的 <code>Code</code> 和 1 字节的 <code>Len</code>, 而后则依据 <code>Len</code> 包含指定长度字节的数据体. 由于当前 <code>options</code> 众多当前仅列举一些比较重要的 <code>options</code>.</p><ol start=0><li><p><code>magic cookie</code>, 正如前文所述, 在 <code>DHCP</code> 报文内包含 4 字节的 <code>magic cookie</code>, 其值为 [0x63, 0x82, 0x53, 0x63].</p></li><li><p><code>DHCP Message Type</code> 该选项编码为 <code>53</code>, 其后在 <code>Len</code> 内定义了 1 字节的数据体, 即 <code>Type</code>, 而 <code>Type</code> 在为 <code>0x01 ~ 0x08</code> 若干种不同的 <code>DHCP</code> 消息类型.</p><pre tabindex=0><code>       Value   Message Type
+       -----   ------------
+         1     DHCPDISCOVER
+         2     DHCPOFFER
+         3     DHCPREQUEST
+         4     DHCPDECLINE
+         5     DHCPACK
+         6     DHCPNAK
+         7     DHCPRELEASE
+         8     DHCPINFORM
 
     Code   Len  Type
    +-----+-----+-----+
    |  53 |  1  | 1-9 |
    +-----+-----+-----+
-</code></pre><ol start=2><li><code>Client-identifier</code> 该选项编码为 <code>61</code>, 其后在 <code>Len</code> 内定义了 <code>n</code> 字节长度的数据体, 其中包含 <code>Type</code> 1 字节和 <code>Client-Identifier</code> <code>n-1</code> 字节. 其中 <code>Client-Identifier</code> 主要用于服务端在其数据库内鉴别查找客户端, 在 <code>DHCP</code> 语义环境下 <code>Type</code> 通常为 <code>0x01</code> 即 <code>硬件地址</code>（<code>MAC</code>), 同时 <code>Client-Identifier</code> 至少为 2 字节, 如果为 <code>MAC</code> 地址的话则为 6 字节.</li></ol><pre tabindex=0><code>   Code   Len   Type  Client-Identifier
+</code></pre></li><li><p><code>Client-identifier</code> 该选项编码为 <code>61</code>, 其后在 <code>Len</code> 内定义了 <code>n</code> 字节长度的数据体, 其中包含 <code>Type</code> 1 字节和 <code>Client-Identifier</code> <code>n-1</code> 字节. 其中 <code>Client-Identifier</code> 主要用于服务端在其数据库内鉴别查找客户端, 在 <code>DHCP</code> 语义环境下 <code>Type</code> 通常为 <code>0x01</code> 即 <code>硬件地址</code>（<code>MAC</code>), 同时 <code>Client-Identifier</code> 至少为 2 字节, 如果为 <code>MAC</code> 地址的话则为 6 字节.</p><pre tabindex=0><code>   Code   Len   Type  Client-Identifier
    +-----+-----+-----+-----+-----+---
    |  61 |  n  |  t1 |  i1 |  i2 | ...
    +-----+-----+-----+-----+-----+---
-</code></pre><ol start=3><li><code>Requested IP Address</code> 该选项用于客户端在 <code>DHCPDISCOVER</code> 消息中向服务端请求指定的 <code>IP</code>.</li></ol><pre tabindex=0><code>    Code   Len          Address
+</code></pre></li><li><p><code>Requested IP Address</code> 该选项用于客户端在 <code>DHCPDISCOVER</code> 消息中向服务端请求指定的 <code>IP</code>.</p><pre tabindex=0><code>    Code   Len          Address
    +-----+-----+-----+-----+-----+-----+
    |  50 |  4  |  a1 |  a2 |  a3 |  a4 |
    +-----+-----+-----+-----+-----+-----+
-</code></pre><ol start=4><li><code>Parameter Request List</code> 该选项用于 <code>DHCP</code> 客户端向服务端请求特定的配置.</li></ol><pre tabindex=0><code>    Code   Len   Option Codes
+</code></pre></li><li><p><code>Parameter Request List</code> 该选项用于 <code>DHCP</code> 客户端向服务端请求特定的配置.</p><pre tabindex=0><code>    Code   Len   Option Codes
    +-----+-----+-----+-----+---
    |  55 |  n  |  c1 |  c2 | ...
    +-----+-----+-----+-----+---
@@ -164,26 +164,26 @@ timers T1, T2   ------------  send DHCPREQUEST      |               |
 Router Option - 0x03
 Domain Name Server Option - 0x06
 Network Time Protocol Servers Option - 0x42
-</code></pre><ol start=5><li><code>End Option</code> 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 <code>RFC</code> 要求 <code>options</code> 字段需填充至少 <code>312</code> 且至多 <code>576</code> 字节.</li></ol><pre tabindex=0><code>    Code
+</code></pre></li><li><p><code>End Option</code> 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 <code>RFC</code> 要求 <code>options</code> 字段需填充至少 <code>312</code> 且至多 <code>576</code> 字节.</p><pre tabindex=0><code>    Code
    +-----+
    | 255 |
    +-----+
-</code></pre><ol start=6><li><code>Pad Option</code> 该选项主要用于字段填充.</li></ol><pre tabindex=0><code>    Code
+</code></pre></li><li><p><code>Pad Option</code> 该选项主要用于字段填充.</p><pre tabindex=0><code>    Code
    +-----+
    |  0  |
    +-----+
-</code></pre><ol start=7><li><code>Subnet Mask</code> 该选项用于指示客户端子网掩码, 其 <code>Len</code> 为固定 4 字节(<code>DHCPv4</code>), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 <code>router option</code> 则 <code>Subnet Mask</code> 应该位于前部.</li></ol><pre tabindex=0><code>    Code   Len        Subnet Mask
+</code></pre></li><li><p><code>Subnet Mask</code> 该选项用于指示客户端子网掩码, 其 <code>Len</code> 为固定 4 字节(<code>DHCPv4</code>), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 <code>router option</code> 则 <code>Subnet Mask</code> 应该位于前部.</p><pre tabindex=0><code>    Code   Len        Subnet Mask
    +-----+-----+-----+-----+-----+-----+
    |  1  |  4  |  m1 |  m2 |  m3 |  m4 |
    +-----+-----+-----+-----+-----+-----+
-</code></pre><ol start=8><li><code>Router Option</code> 该选项主要用于列举当前网络可路由的 <code>IP</code> 地址, 同时其 <code>Len</code> 最少为 4 且永远为 4 的倍数.</li></ol><pre tabindex=0><code>    Code   Len         Address 1               Address 2
+</code></pre></li><li><p><code>Router Option</code> 该选项主要用于列举当前网络可路由的 <code>IP</code> 地址, 同时其 <code>Len</code> 最少为 4 且永远为 4 的倍数.</p><pre tabindex=0><code>    Code   Len         Address 1               Address 2
    +-----+-----+-----+-----+-----+-----+-----+-----+--
    |  3  |  n  |  a1 |  a2 |  a3 |  a4 |  a1 |  a2 |  ...
    +-----+-----+-----+-----+-----+-----+-----+-----+--
-</code></pre><ol start=9><li><code>Renewal (T1) Time Value</code> 该选项主要用于指示从客户端获取 <code>IP</code> 地址到续期该 <code>IP</code> 所需间隔时间. <code>T1 Interval</code> 为 4 字节 32 位整数, 单位为 <code>秒</code>.</li></ol><pre tabindex=0><code>    Code   Len         T1 Interval
+</code></pre></li><li><p><code>Renewal (T1) Time Value</code> 该选项主要用于指示从客户端获取 <code>IP</code> 地址到续期该 <code>IP</code> 所需间隔时间. <code>T1 Interval</code> 为 4 字节 32 位整数, 单位为 <code>秒</code>.</p><pre tabindex=0><code>    Code   Len         T1 Interval
    +-----+-----+-----+-----+-----+-----+
    |  58 |  4  |  t1 |  t2 |  t3 |  t4 |
    +-----+-----+-----+-----+-----+-----+
-</code></pre><ol start=10><li></li></ol><h1 id=ref>REF<a href=#ref class=hanchor arialabel=Anchor>&#8983;</a></h1><ol><li><a href=https://datatracker.ietf.org/doc/html/rfc2131>RFC 2131 - Dynamic Host Configuration Protocol</a></li><li><a href=https://datatracker.ietf.org/doc/html/rfc2132>RFC 2132 - DHCP Options and BOOTP Vendor Extensions</a></li></ol></div></div><div class=pagination><div class=pagination__title><span class=pagination__title-h>Read other posts</span><hr></div><div class=pagination__buttons><span class="button next"><a href=https://blog.liloew.in/posts/hairpin-nat-mikrotik-routeros-7/><span class=button__text>解决 MikroTik RouterOS 下 NAT 回环问题</span>
+</code></pre></li></ol><h1 id=ref>REF<a href=#ref class=hanchor arialabel=Anchor>&#8983;</a></h1><ol><li><a href=https://datatracker.ietf.org/doc/html/rfc2131>RFC 2131 - Dynamic Host Configuration Protocol</a></li><li><a href=https://datatracker.ietf.org/doc/html/rfc2132>RFC 2132 - DHCP Options and BOOTP Vendor Extensions</a></li></ol></div></div><div class=pagination><div class=pagination__title><span class=pagination__title-h>Read other posts</span><hr></div><div class=pagination__buttons><span class="button next"><a href=https://blog.liloew.in/posts/hairpin-nat-mikrotik-routeros-7/><span class=button__text>解决 MikroTik RouterOS 下 NAT 回环问题</span>
 <span class=button__icon>→</span></a></span></div></div></article></div><footer class=footer><div class=footer__inner><div class=copyright><span>© 2024 Powered by <a href=http://gohugo.io>Hugo</a></span>
 <span>:: <a href=https://github.com/panr/hugo-theme-terminal target=_blank>Theme</a> made by <a href=https://github.com/panr target=_blank>panr</a></span></div></div></footer><script type=text/javascript src=/bundle.min.js></script></div></body></html>
