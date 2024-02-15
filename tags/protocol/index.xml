@@ -1,26 +1,30 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>protocol on liloew 在写字</title><link>https://blog.liloew.in/tags/protocol/</link><description>Recent content in protocol on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sun, 15 Oct 2023 14:58:16 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/protocol/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</link><pubDate>Sun, 15 Oct 2023 14:58:16 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</guid><description>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;pre>&lt;code>&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
-&lt;/code>&lt;/pre>
+&lt;blockquote>
+&lt;p>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p>
+&lt;/blockquote>
 &lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
 &lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p></description><content>&lt;h1 id="背景">背景&lt;/h1>
 &lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;pre>&lt;code>&amp;gt; iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。
-&lt;/code>&lt;/pre>
+&lt;blockquote>
+&lt;p>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p>
+&lt;/blockquote>
 &lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
 &lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p>
 &lt;h1 id="实现">实现&lt;/h1>
 &lt;p>&lt;code>DHCP&lt;/code> 协议前身是 &lt;code>BOOTP&lt;/code> 协议, 当前关于 &lt;code>DHCP&lt;/code> 最新的信息可在 &lt;code>RFC 2131&lt;/code> 中查阅, 另外 &lt;code>DHCPv6&lt;/code> 则可在 &lt;code>RFC 3315&lt;/code> 中定义. 不过本文当前仅讨论 &lt;code>DHCPv4&lt;/code>. &lt;code>DHCP&lt;/code> 全称 &lt;code>Dynamic Host Configuration Protocol&lt;/code>, 即 &lt;code>动态主机配置协议&lt;/code>, 是一种使网络管理员能够集中管理和自动分配 &lt;code>IP&lt;/code> 地址的通信协议. 在 &lt;code>IP&lt;/code> 网络中每个连接 &lt;code>Internet&lt;/code> 的设备都需要分配唯一的 &lt;code>IP&lt;/code> 地址, &lt;code>DHCP&lt;/code> 协议可使得网络管理员采用中心化的方式分配 &lt;code>IP&lt;/code> 地址, 并对 &lt;code>IP&lt;/code> 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 &lt;code>IP&lt;/code> 地址请求.&lt;/p>
 &lt;p>同时 &lt;code>DHCP&lt;/code> 使用了 &lt;code>租约&lt;/code> 的概念, 这使得在局域网中可以最大化地使用有限的 &lt;code>IP&lt;/code> 地址资源, 同时 &lt;code>DHCP&lt;/code> 也支持为计算机分配静态地址.&lt;/p>
-&lt;p>&lt;code>DHCP&lt;/code> 协议是一种基于 &lt;code>UDP&lt;/code> 之上的应用层协议, 主要是因为在依据 &lt;code>DHCP&lt;/code> 获取 &lt;code>IP&lt;/code> 地址前计算机尚无有效的 &lt;code>IP&lt;/code> 地址, 此时 &lt;code>客户端&lt;/code> 可利用 &lt;code>UDP&lt;/code> 的广播特性向局域网内广播 &lt;code>DHCP&lt;/code> 报文, 同时 &lt;code>DHCP 服务器&lt;/code> 亦采用广播的形式向局域网内响应对应请求. &lt;code>DHCPv4&lt;/code> 定义了以下几种消息:
-&lt;code>DHCPDISCOVER&lt;/code> 消息用于 &lt;code>客户端&lt;/code> 广播以确定局域网内 &lt;code>服务器&lt;/code>.
-&lt;code>DHCPOFFER&lt;/code> 消息用于服务端响应客户端的 &lt;code>DHCPDISCOVER&lt;/code> 消息并向客户端提供配置参数.
-&lt;code>DHCPREQUEST&lt;/code> 消息主要用于客户端依据服务端提供的配置参数向服务端请求 &lt;code>IP&lt;/code> 地址.
-&lt;code>DHCPACK&lt;/code> 消息用于服务端向客户端依据配置参数确认分配的 &lt;code>IP 地址&lt;/code>.
-&lt;code>DHCPNAK&lt;/code> 消息用于服务端通知客户端网络地址错误或客户端地址过期等.
-&lt;code>DHCPDECLINE&lt;/code> 消息用于客户端向服务端指示已拥有网络地址.
-&lt;code>DHCPRELEASE&lt;/code> 消息用于客户端告知服务端释放对应的网络地址.
-&lt;code>DHCPINFORM&lt;/code> 消息用于客户端向服务端请求本地配置.&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>DHCP&lt;/code> 协议是一种基于 &lt;code>UDP&lt;/code> 之上的应用层协议, 主要是因为在依据 &lt;code>DHCP&lt;/code> 获取 &lt;code>IP&lt;/code> 地址前计算机尚无有效的 &lt;code>IP&lt;/code> 地址, 此时 &lt;code>客户端&lt;/code> 可利用 &lt;code>UDP&lt;/code> 的广播特性向局域网内广播 &lt;code>DHCP&lt;/code> 报文, 同时 &lt;code>DHCP 服务器&lt;/code> 亦采用广播的形式向局域网内响应对应请求. &lt;code>DHCPv4&lt;/code> 定义了以下几种消息:&lt;/li>
+&lt;li>&lt;code>DHCPDISCOVER&lt;/code> 消息用于 &lt;code>客户端&lt;/code> 广播以确定局域网内 &lt;code>服务器&lt;/code>.&lt;/li>
+&lt;li>&lt;code>DHCPOFFER&lt;/code> 消息用于服务端响应客户端的 &lt;code>DHCPDISCOVER&lt;/code> 消息并向客户端提供配置参数.&lt;/li>
+&lt;li>&lt;code>DHCPREQUEST&lt;/code> 消息主要用于客户端依据服务端提供的配置参数向服务端请求 &lt;code>IP&lt;/code> 地址.&lt;/li>
+&lt;li>&lt;code>DHCPACK&lt;/code> 消息用于服务端向客户端依据配置参数确认分配的 &lt;code>IP 地址&lt;/code>.&lt;/li>
+&lt;li>&lt;code>DHCPNAK&lt;/code> 消息用于服务端通知客户端网络地址错误或客户端地址过期等.&lt;/li>
+&lt;li>&lt;code>DHCPDECLINE&lt;/code> 消息用于客户端向服务端指示已拥有网络地址.&lt;/li>
+&lt;li>&lt;code>DHCPRELEASE&lt;/code> 消息用于客户端告知服务端释放对应的网络地址.&lt;/li>
+&lt;li>&lt;code>DHCPINFORM&lt;/code> 消息用于客户端向服务端请求本地配置.&lt;/li>
+&lt;/ul>
 &lt;p>&lt;code>RFC 2131&lt;/code> 在定义 &lt;code>DHCP&lt;/code> 的几种消息的同时也定义了 &lt;code>DHCP&lt;/code> 报文格式:&lt;/p>
 &lt;pre tabindex="0">&lt;code> 0 1 2 3
 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -53,21 +57,53 @@
 | |
 | options (variable) |
 +---------------------------------------------------------------+
-&lt;/code>&lt;/pre>&lt;p>&lt;code>op&lt;/code> 字段定义了消息的方向 &lt;code>1&lt;/code> 为 &lt;code>客户端&lt;/code> 向 &lt;code>服务端&lt;/code> 发生请求, &lt;code>2&lt;/code> 则为 &lt;code>服务端&lt;/code> 发回的响应.&lt;/p>
+&lt;/code>&lt;/pre>&lt;ul>
+&lt;li>
+&lt;p>&lt;code>op&lt;/code> 字段定义了消息的方向 &lt;code>1&lt;/code> 为 &lt;code>客户端&lt;/code> 向 &lt;code>服务端&lt;/code> 发生请求, &lt;code>2&lt;/code> 则为 &lt;code>服务端&lt;/code> 发回的响应.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>htype&lt;/code> 字段定义了 &lt;code>硬件地址类型&lt;/code>, &lt;code>1&lt;/code> 为 &lt;code>10mb&lt;/code> 以太网, 具体定义可参见 &lt;code>RFC 1700&lt;/code>, 在 &lt;code>DHCP&lt;/code> 中一般使用 &lt;code>1&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>hlen&lt;/code> 字段表示 &lt;code>硬件地址长度&lt;/code>, 依据 &lt;code>htype&lt;/code> 定义当 &lt;code>htype&lt;/code> 为 &lt;code>1&lt;/code>, 即 &lt;code>以太网&lt;/code> 时, 该字段为 &lt;code>6&lt;/code>, 也即 &lt;code>MAC&lt;/code> 地址长度.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>hops&lt;/code> 字段表示 &lt;code>DHCP&lt;/code> 协议经过的节点数, 客户端在初始发送 &lt;code>DHCP&lt;/code> 请求时将其设置为 &lt;code>0&lt;/code>, &lt;code>DHCP&lt;/code> 协议的 &lt;code>中继&lt;/code> 节点可选地增加该字段的值.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>xid&lt;/code> 字段表示 &lt;code>事务 ID&lt;/code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>secs&lt;/code> 字段为客户端获取 &lt;code>IP&lt;/code> 到进行地址 &lt;code>续约&lt;/code> 时所经历的秒数.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>flags&lt;/code> 字段当前在 &lt;code>DHCP&lt;/code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 &lt;code>DHCP&lt;/code> &lt;code>服务端&lt;/code> 或 &lt;code>中继&lt;/code> 节点是否将广播信息发送到客户端所在的子网.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>ciaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>, 仅当客户端在 &lt;code>BOUND&lt;/code>, &lt;code>RENEW&lt;/code> 或者 &lt;code>REBINDING&lt;/code> 状态时才填充该字段.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>yiaddr&lt;/code> 字段表示 &lt;code>your&lt;/code> &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>siaddr&lt;/code> 字段为下一 &lt;code>服务端&lt;/code> 节点 &lt;code>IP&lt;/code>, 仅当在 &lt;code>DHCPOFFER&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 请求中填充该字段.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>giaddr&lt;/code> 字段为 &lt;code>中继节点&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>chaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>硬件地址&lt;/code>, 一般为 &lt;code>MAC 地址&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>sname&lt;/code> 字段为可选的 &lt;code>服务器主机名&lt;/code>, 并且以 &lt;code>null&lt;/code> 字符串结束, 也即 &lt;code>0x00&lt;/code>.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>file&lt;/code> 字段为 &lt;code>启动文件名&lt;/code>, 在 &lt;code>DHCPDISCOVER&lt;/code> 消息中以常规文件名或 &lt;code>null&lt;/code> 表示, 在 &lt;code>DHCPOFFER&lt;/code> 消息中以全限定路径名表示.&lt;/p>
+&lt;/li>
+&lt;li>
 &lt;p>&lt;code>options&lt;/code> 字段是变长的可选项. 其中首 4 位为固定的 &lt;code>magic cookie&lt;/code> - [0x63, 0x82, 0x53, 0x63].&lt;/p>
+&lt;/li>
+&lt;/ul>
 &lt;pre tabindex="0">&lt;code> Server Client Server
 (not selected) (selected)
 v v v
