@@ -11,7 +11,7 @@
 &lt;/blockquote>
 &lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
 &lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p>
-&lt;h1 id="实现">实现&lt;/h1>
+&lt;h1 id="分析">分析&lt;/h1>
 &lt;p>&lt;code>DHCP&lt;/code> 协议前身是 &lt;code>BOOTP&lt;/code> 协议, 当前关于 &lt;code>DHCP&lt;/code> 最新的信息可在 &lt;code>RFC 2131&lt;/code> 中查阅, 另外 &lt;code>DHCPv6&lt;/code> 则可在 &lt;code>RFC 3315&lt;/code> 中定义. 不过本文当前仅讨论 &lt;code>DHCPv4&lt;/code>. &lt;code>DHCP&lt;/code> 全称 &lt;code>Dynamic Host Configuration Protocol&lt;/code>, 即 &lt;code>动态主机配置协议&lt;/code>, 是一种使网络管理员能够集中管理和自动分配 &lt;code>IP&lt;/code> 地址的通信协议. 在 &lt;code>IP&lt;/code> 网络中每个连接 &lt;code>Internet&lt;/code> 的设备都需要分配唯一的 &lt;code>IP&lt;/code> 地址, &lt;code>DHCP&lt;/code> 协议可使得网络管理员采用中心化的方式分配 &lt;code>IP&lt;/code> 地址, 并对 &lt;code>IP&lt;/code> 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 &lt;code>IP&lt;/code> 地址请求.&lt;/p>
 &lt;p>同时 &lt;code>DHCP&lt;/code> 使用了 &lt;code>租约&lt;/code> 的概念, 这使得在局域网中可以最大化地使用有限的 &lt;code>IP&lt;/code> 地址资源, 同时 &lt;code>DHCP&lt;/code> 也支持为计算机分配静态地址.&lt;/p>
 &lt;ul>
