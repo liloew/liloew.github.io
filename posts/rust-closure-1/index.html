@@ -1,0 +1,84 @@
+<!doctype html><html lang=cn><head><title>Rust 之闭包 - Ⅰ :: liloew 在写字</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="闭包 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, 闭包 和 匿名函数 在一些语境下经常互为替换, 但严格来说 匿名函数 也即字面意义上等没有被赋予名称等函数, 而 闭包 实际上是函数的一个实例, 相对于常规函数, 闭包 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:
+f(x) = g(x) + h(y) 这里函数 f(x) 可以表示为关于 x 和 y 的函数, 而函数 f 中无 y 的信息(相对的是 f(x, y)), 即 y 是自由变量. 除了本文介绍等 Rust 外其他诸如 Swift, Go, Erlang, JavaScript, Python 等都有 闭包.
+我们先来看一下在 Rust 中如何定义一个常规函数:
+fn max(left: i64, right: i64) -&amp;gt; i64 { if left &amp;gt; right { left } else { right } } 我们将其转换为 闭包:"><meta name=keywords content><meta name=robots content="noodp"><link rel=canonical href=https://blog.liloew.in/posts/rust-closure-1/><link rel=stylesheet href=https://blog.liloew.in/styles.css><link rel="shortcut icon" href=https://blog.liloew.in/img/theme-colors/green.png><link rel=apple-touch-icon href=https://blog.liloew.in/img/theme-colors/green.png><meta name=twitter:card content="summary"><meta name=twitter:site content><meta name=twitter:creator content><meta property="og:locale" content="cn"><meta property="og:type" content="article"><meta property="og:title" content="Rust 之闭包 - Ⅰ"><meta property="og:description" content="闭包 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, 闭包 和 匿名函数 在一些语境下经常互为替换, 但严格来说 匿名函数 也即字面意义上等没有被赋予名称等函数, 而 闭包 实际上是函数的一个实例, 相对于常规函数, 闭包 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:
+f(x) = g(x) + h(y) 这里函数 f(x) 可以表示为关于 x 和 y 的函数, 而函数 f 中无 y 的信息(相对的是 f(x, y)), 即 y 是自由变量. 除了本文介绍等 Rust 外其他诸如 Swift, Go, Erlang, JavaScript, Python 等都有 闭包.
+我们先来看一下在 Rust 中如何定义一个常规函数:
+fn max(left: i64, right: i64) -&amp;gt; i64 { if left &amp;gt; right { left } else { right } } 我们将其转换为 闭包:"><meta property="og:url" content="https://blog.liloew.in/posts/rust-closure-1/"><meta property="og:site_name" content="liloew 在写字"><meta property="og:image" content="https://blog.liloew.in/img/favicon/green.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627"><meta property="article:published_time" content="2023-12-21 19:15:41 +0800 +0800"><meta name=google-site-verification content="o7XjncKCMp0WON8AzwzxbzEUpfS9BiR6I94Hao6szK0"></head><body class=green><div class="container center headings--one-size"><header class=header><div class=header__inner><div class=header__logo><a href=/><div class=logo>Terminal</div></a></div><ul class="menu menu--mobile"><li class=menu__trigger>Menu&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=/books>书</a></li><li><a href=/about>关于</a></li><hr><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul><ul class="menu menu--desktop menu--language-selector"><li class=menu__trigger>简中&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul></div><nav class=navigation-menu><ul class="navigation-menu__inner menu--desktop"><li><a href=/books>书</a></li><li><a href=/about>关于</a></li></ul></nav></header><div class=content><article class=post><h1 class=post-title><a href=https://blog.liloew.in/posts/rust-closure-1/>Rust 之闭包 - Ⅰ</a></h1><div class=post-meta><time class=post-date>2023-12-21</time></div><span class=post-tags>#<a href=https://blog.liloew.in/tags/rust/>Rust</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/closure/>Closure</a>&nbsp;</span><div class=post-content><div><p><code>闭包</code> 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, <code>闭包</code> 和 <code>匿名函数</code> 在一些语境下经常互为替换, 但严格来说 <code>匿名函数</code> 也即字面意义上等没有被赋予名称等函数, 而 <code>闭包</code> 实际上是函数的一个实例, 相对于常规函数, <code>闭包</code> 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:</p><pre tabindex=0><code>f(x) = g(x) + h(y)
+</code></pre><p>这里函数 <code>f(x)</code> 可以表示为关于 <code>x</code> 和 <code>y</code> 的函数, 而函数 <code>f</code> 中无 <code>y</code> 的信息(相对的是 <code>f(x, y)</code>), 即 <code>y</code> 是自由变量. 除了本文介绍等 <code>Rust</code> 外其他诸如 <code>Swift</code>, <code>Go</code>, <code>Erlang</code>, <code>JavaScript</code>, <code>Python</code> 等都有 <code>闭包</code>.</p><p>我们先来看一下在 <code>Rust</code> 中如何定义一个常规函数:</p><pre tabindex=0><code>fn max(left: i64, right: i64) -&gt; i64 {
+    if left &gt; right {
+        left
+    } else {
+        right
+    }
+}
+</code></pre><p>我们将其转换为 <code>闭包</code>:</p><pre tabindex=0><code>|left: i64, right: i64| -&gt; i64 {
+    if left &gt; right {
+        left
+    } else {
+        right
+    }
+}
+</code></pre><p>可以看到 <code>闭包</code> 的语法与 <code>函数</code> 即为相似, 我们只是简单地把 <code>(</code> 和 <code>)</code> 用 <code>|</code> 替换并且移除了 <code>fn</code> 关键字和 <code>函数名</code>. 为了进行调用我们可以将其赋值给一个变量并通过该变量来调用定义的 <code>闭包</code>:</p><pre tabindex=0><code>let max_closure = |left: i64, right: i64| -&gt; i64 {
+    if left &gt; right {
+        left
+    } else {
+        right
+    }
+}
+
+let max_number = max_closure(10, 11);
+</code></pre><p>相对于函数而言, 以上闭包我们还可以进一步简化:</p><pre tabindex=0><code>// First
+let max_closure = |left, right| {
+    if left &gt; right {
+        left
+    } else {
+        right
+    }
+};
+// -----------------------------------------------
+// Second
+let max_closure = |left, right| if left &gt; right { left } else { right };
+</code></pre><p>可以看到除了 <code>|</code> 我们移除了多于的 <code>{}</code> 和 <code>i64</code> 类型定义.</p><p>前文提到过 <code>闭包</code> 相对于 <code>函数</code> 具有捕捉上下文环境的能力, 也即可以拥有 <code>自由变量</code>. 仍以上面定义的 <code>max_closure</code> 闭包为例:</p><pre tabindex=0><code>let addition = 10;
+let max_closure = |left, right| {
+    if left &gt; right {
+        left + addition
+    } else {
+        right + addition
+    }
+};
+</code></pre><p>这里 <code>addition</code> 为外部变量, 但在 <code>max_closure</code> 内部我们仍然可以访问, 如果是函数则不行.</p><p>以上的例子并无特别之处, <code>闭包</code> 可以实现的功能函数一般也可以实现, 除了捕捉上下文环境外. 但上面闭包所展现的场景并不能有效说明为何要用闭包而不是直接书写如下语句:</p><pre tabindex=0><code>let addition = 10;
+let left = ;
+let right = ;
+let max_value = if left &gt; right {
+    left + addition
+} else {
+    right + addition
+};
+</code></pre><p>前文说过 <code>闭包</code> 是以函数为 <code>一等公民</code> 的编程语言中所具有的鲜明特性, 因此让以上定义的 <code>max_closure</code> 闭包发挥作用往往是在如下场景中:</p><pre tabindex=0><code>fn max_by_number(addition: i64) -&gt; impl Fn(i64, i64) -&gt; i64 {
+    return move |left: i64, right: i64| -&gt; i64 {
+        if left &gt; right {
+            left + addition
+        } else {
+            right + addition
+        }
+    };
+}
+
+let max = max_by_number(10);
+println!(&#34;MAX: {}&#34;, max(11, 12));
+</code></pre><p>这里较之前语法有过多元素需要介绍, 首先在定义 <code>max_by_number</code> 函数时其返回等不再是一个普通的类型而是 <code>impl Fn(i64, i64) -> i64</code>. <code>Fn</code> 是一个 <code>Trait</code>, 其表示 <code>调用者可以反复调用并且不修改其参数, 即参数以 & 借用</code>. 同时 <code>Rust</code> 还为我们提供了另外两种类似的 <code>Trait</code>: <code>FnMut</code> - <code>调用者可多次调用并且会修改其参数, 即参数以 &mut 形式借用</code>; <code>FnOnce</code> - <code>调用者仅可调用一次, 参数以 move 形式传入</code>. 另外需要补充等是 <code>FnOnce</code> 是 <code>FnMut</code> 的 <code>父</code> <code>Trait</code>, <code>FnMut</code> 是 <code>Fn</code> 的 <code>父</code> <code>Trait</code>. 也即任何实现了 <code>FnMut</code> 的对象必然实现了 <code>FnOnce</code>, 任何实现了 <code>Fn</code> 的对象必然也实现了 <code>FnMut</code>. 那么这个 <code>max_by_number</code> 函数定义真正函数为 <code>返回一个实现了 Fn Trait 的闭包, 该闭包有两个参数都是 i64 类型, 同时该闭包会返回一个 i64 的结果</code>. <code>max_by_number</code> 函数体里直接通过 <code>return</code> 返回 <code>闭包</code>, 该 <code>闭包</code> 通过 <code>move</code> 捕捉外部环境的 <code>addition</code> 变量. 语句 <code>let max = max_by_number(10);</code> 返回一个闭包并赋值给 <code>max</code>, 后续再通过 <code>max(11, 12)</code> 调用该闭包获得最终结果.</p><p>如果以上还不够明晰的话我们看一个 <code>Rust</code> 中经常会接触到的实用 <code>闭包</code> - <code>unwrap_or_else</code>:</p><pre tabindex=0><code>    pub fn unwrap_or_else&lt;F&gt;(self, f: F) -&gt; T
+    where
+        F: FnOnce() -&gt; T,
+    {
+        match self {
+            Some(x) =&gt; x,
+            None =&gt; f(),
+        }
+    }
+</code></pre><p><code>unwrap_or_else</code> 函数获得自身所有权并接收一个 <code>FnOnce</code> 等闭包同时该闭包返回泛型 <code>T</code> - 其结果与 <code>Option&lt;T></code> 相吻合.</p></div></div><div class=pagination><div class=pagination__title><span class=pagination__title-h>Read other posts</span><hr></div><div class=pagination__buttons><span class="button next"><a href=https://blog.liloew.in/posts/rust-implementation-dhcp-2/><span class=button__text>DHCP 协议分析及实现 - Ⅱ</span>
+<span class=button__icon>→</span></a></span></div></div></article></div><footer class=footer><div class=footer__inner><div class=copyright><span>© 2024 Powered by <a href=https://gohugo.io>Hugo</a></span>
+<span>:: <a href=https://github.com/panr/hugo-theme-terminal target=_blank>Theme</a> made by <a href=https://github.com/panr target=_blank>panr</a></span></div></div></footer><script type=text/javascript src=/bundle.min.js></script>
+<script defer src=https://static.cloudflareinsights.com/beacon.min.js data-cf-beacon='{"token": "830a0d98b04b48168572244940312993"}'></script>
+<script type=text/javascript>var sc_project=12967808,sc_invisible=1,sc_security="a1111881"</script><script type=text/javascript src=https://www.statcounter.com/counter/counter.js async></script><noscript><div class=statcounter><a title="Web Analytics" href=https://statcounter.com/ target=_blank><img class=statcounter src=https://c.statcounter.com/12967808/0/a1111881/1/ alt="Web Analytics" referrerpolicy=no-referrer-when-downgrade></a></div></noscript></div></body></html>

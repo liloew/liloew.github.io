@@ -1,4 +1,90 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on liloew 在写字</title><link>https://blog.liloew.in/posts/</link><description>Recent content in Posts on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Fri, 03 Nov 2023 21:03:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on liloew 在写字</title><link>https://blog.liloew.in/posts/</link><description>Recent content in Posts on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Thu, 21 Dec 2023 19:15:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Rust 之闭包 - Ⅰ</title><link>https://blog.liloew.in/posts/rust-closure-1/</link><pubDate>Thu, 21 Dec 2023 19:15:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-closure-1/</guid><description>闭包 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, 闭包 和 匿名函数 在一些语境下经常互为替换, 但严格来说 匿名函数 也即字面意义上等没有被赋予名称等函数, 而 闭包 实际上是函数的一个实例, 相对于常规函数, 闭包 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:
+f(x) = g(x) + h(y) 这里函数 f(x) 可以表示为关于 x 和 y 的函数, 而函数 f 中无 y 的信息(相对的是 f(x, y)), 即 y 是自由变量. 除了本文介绍等 Rust 外其他诸如 Swift, Go, Erlang, JavaScript, Python 等都有 闭包.
+我们先来看一下在 Rust 中如何定义一个常规函数:
+fn max(left: i64, right: i64) -&amp;gt; i64 { if left &amp;gt; right { left } else { right } } 我们将其转换为 闭包:</description><content>&lt;p>&lt;code>闭包&lt;/code> 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, &lt;code>闭包&lt;/code> 和 &lt;code>匿名函数&lt;/code> 在一些语境下经常互为替换, 但严格来说 &lt;code>匿名函数&lt;/code> 也即字面意义上等没有被赋予名称等函数, 而 &lt;code>闭包&lt;/code> 实际上是函数的一个实例, 相对于常规函数, &lt;code>闭包&lt;/code> 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:&lt;/p>
+&lt;pre tabindex="0">&lt;code>f(x) = g(x) + h(y)
+&lt;/code>&lt;/pre>&lt;p>这里函数 &lt;code>f(x)&lt;/code> 可以表示为关于 &lt;code>x&lt;/code> 和 &lt;code>y&lt;/code> 的函数, 而函数 &lt;code>f&lt;/code> 中无 &lt;code>y&lt;/code> 的信息(相对的是 &lt;code>f(x, y)&lt;/code>), 即 &lt;code>y&lt;/code> 是自由变量. 除了本文介绍等 &lt;code>Rust&lt;/code> 外其他诸如 &lt;code>Swift&lt;/code>, &lt;code>Go&lt;/code>, &lt;code>Erlang&lt;/code>, &lt;code>JavaScript&lt;/code>, &lt;code>Python&lt;/code> 等都有 &lt;code>闭包&lt;/code>.&lt;/p>
+&lt;p>我们先来看一下在 &lt;code>Rust&lt;/code> 中如何定义一个常规函数:&lt;/p>
+&lt;pre tabindex="0">&lt;code>fn max(left: i64, right: i64) -&amp;gt; i64 {
+if left &amp;gt; right {
+left
+} else {
+right
+}
+}
+&lt;/code>&lt;/pre>&lt;p>我们将其转换为 &lt;code>闭包&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>|left: i64, right: i64| -&amp;gt; i64 {
+if left &amp;gt; right {
+left
+} else {
+right
+}
+}
+&lt;/code>&lt;/pre>&lt;p>可以看到 &lt;code>闭包&lt;/code> 的语法与 &lt;code>函数&lt;/code> 即为相似, 我们只是简单地把 &lt;code>(&lt;/code> 和 &lt;code>)&lt;/code> 用 &lt;code>|&lt;/code> 替换并且移除了 &lt;code>fn&lt;/code> 关键字和 &lt;code>函数名&lt;/code>. 为了进行调用我们可以将其赋值给一个变量并通过该变量来调用定义的 &lt;code>闭包&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let max_closure = |left: i64, right: i64| -&amp;gt; i64 {
+if left &amp;gt; right {
+left
+} else {
+right
+}
+}
+let max_number = max_closure(10, 11);
+&lt;/code>&lt;/pre>&lt;p>相对于函数而言, 以上闭包我们还可以进一步简化:&lt;/p>
+&lt;pre tabindex="0">&lt;code>// First
+let max_closure = |left, right| {
+if left &amp;gt; right {
+left
+} else {
+right
+}
+};
+// -----------------------------------------------
+// Second
+let max_closure = |left, right| if left &amp;gt; right { left } else { right };
+&lt;/code>&lt;/pre>&lt;p>可以看到除了 &lt;code>|&lt;/code> 我们移除了多于的 &lt;code>{}&lt;/code> 和 &lt;code>i64&lt;/code> 类型定义.&lt;/p>
+&lt;p>前文提到过 &lt;code>闭包&lt;/code> 相对于 &lt;code>函数&lt;/code> 具有捕捉上下文环境的能力, 也即可以拥有 &lt;code>自由变量&lt;/code>. 仍以上面定义的 &lt;code>max_closure&lt;/code> 闭包为例:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let addition = 10;
+let max_closure = |left, right| {
+if left &amp;gt; right {
+left + addition
+} else {
+right + addition
+}
+};
+&lt;/code>&lt;/pre>&lt;p>这里 &lt;code>addition&lt;/code> 为外部变量, 但在 &lt;code>max_closure&lt;/code> 内部我们仍然可以访问, 如果是函数则不行.&lt;/p>
+&lt;p>以上的例子并无特别之处, &lt;code>闭包&lt;/code> 可以实现的功能函数一般也可以实现, 除了捕捉上下文环境外. 但上面闭包所展现的场景并不能有效说明为何要用闭包而不是直接书写如下语句:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let addition = 10;
+let left = ;
+let right = ;
+let max_value = if left &amp;gt; right {
+left + addition
+} else {
+right + addition
+};
+&lt;/code>&lt;/pre>&lt;p>前文说过 &lt;code>闭包&lt;/code> 是以函数为 &lt;code>一等公民&lt;/code> 的编程语言中所具有的鲜明特性, 因此让以上定义的 &lt;code>max_closure&lt;/code> 闭包发挥作用往往是在如下场景中:&lt;/p>
+&lt;pre tabindex="0">&lt;code>fn max_by_number(addition: i64) -&amp;gt; impl Fn(i64, i64) -&amp;gt; i64 {
+return move |left: i64, right: i64| -&amp;gt; i64 {
+if left &amp;gt; right {
+left + addition
+} else {
+right + addition
+}
+};
+}
+let max = max_by_number(10);
+println!(&amp;#34;MAX: {}&amp;#34;, max(11, 12));
+&lt;/code>&lt;/pre>&lt;p>这里较之前语法有过多元素需要介绍, 首先在定义 &lt;code>max_by_number&lt;/code> 函数时其返回等不再是一个普通的类型而是 &lt;code>impl Fn(i64, i64) -&amp;gt; i64&lt;/code>. &lt;code>Fn&lt;/code> 是一个 &lt;code>Trait&lt;/code>, 其表示 &lt;code>调用者可以反复调用并且不修改其参数, 即参数以 &amp;amp; 借用&lt;/code>. 同时 &lt;code>Rust&lt;/code> 还为我们提供了另外两种类似的 &lt;code>Trait&lt;/code>: &lt;code>FnMut&lt;/code> - &lt;code>调用者可多次调用并且会修改其参数, 即参数以 &amp;amp;mut 形式借用&lt;/code>; &lt;code>FnOnce&lt;/code> - &lt;code>调用者仅可调用一次, 参数以 move 形式传入&lt;/code>. 另外需要补充等是 &lt;code>FnOnce&lt;/code> 是 &lt;code>FnMut&lt;/code> 的 &lt;code>父&lt;/code> &lt;code>Trait&lt;/code>, &lt;code>FnMut&lt;/code> 是 &lt;code>Fn&lt;/code> 的 &lt;code>父&lt;/code> &lt;code>Trait&lt;/code>. 也即任何实现了 &lt;code>FnMut&lt;/code> 的对象必然实现了 &lt;code>FnOnce&lt;/code>, 任何实现了 &lt;code>Fn&lt;/code> 的对象必然也实现了 &lt;code>FnMut&lt;/code>. 那么这个 &lt;code>max_by_number&lt;/code> 函数定义真正函数为 &lt;code>返回一个实现了 Fn Trait 的闭包, 该闭包有两个参数都是 i64 类型, 同时该闭包会返回一个 i64 的结果&lt;/code>. &lt;code>max_by_number&lt;/code> 函数体里直接通过 &lt;code>return&lt;/code> 返回 &lt;code>闭包&lt;/code>, 该 &lt;code>闭包&lt;/code> 通过 &lt;code>move&lt;/code> 捕捉外部环境的 &lt;code>addition&lt;/code> 变量. 语句 &lt;code>let max = max_by_number(10);&lt;/code> 返回一个闭包并赋值给 &lt;code>max&lt;/code>, 后续再通过 &lt;code>max(11, 12)&lt;/code> 调用该闭包获得最终结果.&lt;/p>
+&lt;p>如果以上还不够明晰的话我们看一个 &lt;code>Rust&lt;/code> 中经常会接触到的实用 &lt;code>闭包&lt;/code> - &lt;code>unwrap_or_else&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code> pub fn unwrap_or_else&amp;lt;F&amp;gt;(self, f: F) -&amp;gt; T
+where
+F: FnOnce() -&amp;gt; T,
+{
+match self {
+Some(x) =&amp;gt; x,
+None =&amp;gt; f(),
+}
+}
+&lt;/code>&lt;/pre>&lt;p>&lt;code>unwrap_or_else&lt;/code> 函数获得自身所有权并接收一个 &lt;code>FnOnce&lt;/code> 等闭包同时该闭包返回泛型 &lt;code>T&lt;/code> - 其结果与 &lt;code>Option&amp;lt;T&amp;gt;&lt;/code> 相吻合.&lt;/p></content></item><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
 &lt;h2 id="环境准备">环境准备&lt;/h2>
 &lt;p>首先需要安装 &lt;code>Rust&lt;/code>, 目前 &lt;code>Rust&lt;/code> 官方主要提供 &lt;code>Rustup&lt;/code> 这一工具管理 &lt;code>Rust&lt;/code> 各版本. 如果是 &lt;code>Windows&lt;/code> 可直接下载 &lt;code>Rustup-init.exe&lt;/code> 运行即可, 如果是 &lt;code>Linux&lt;/code> 或 &lt;code>macOS&lt;/code> 则可在 &lt;code>Shell&lt;/code> 中运行一下命令快速安装:&lt;/p>
 &lt;pre tabindex="0">&lt;code>curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
