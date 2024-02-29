@@ -73,7 +73,7 @@ Upstream peer is: Backend { addr: Inet(192.168.1.1:443), weight: 1 }
 Upstream peer is: Backend { addr: Inet(192.168.1.2:443), weight: 1 }
 &lt;/code>&lt;/pre>&lt;p>从以上日志可以看出当前代理服务缺失以轮询的方式访问后端实例.&lt;/p>
 &lt;h1 id="后记">后记&lt;/h1>
-&lt;p>当前 &lt;code>Pingora&lt;/code> 仍然有待完善, 首先 &lt;code>API&lt;/code> 稳定性并不能保证, 后续可能随着版本研究或是功能迭代可能变化, 另一个问题是对非 &lt;code>Unix&lt;/code> 系统的支持并不在路线图中.&lt;/p>
+&lt;p>当前 &lt;code>Pingora&lt;/code> 仍然有待完善, 首先 &lt;code>API&lt;/code> 稳定性并不能保证, 后续可能随着版本升级或是功能迭代可能变化, 另一个问题是对非 &lt;code>Unix&lt;/code> 系统的支持并不在路线图中.&lt;/p>
 &lt;h1 id="ref">REF&lt;/h1>
 &lt;ol>
 &lt;li>&lt;a href="https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/">How we built Pingora, the proxy that connects Cloudflare to the Internet&lt;/a>&lt;/li>
