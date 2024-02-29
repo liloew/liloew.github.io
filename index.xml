@@ -1,4 +1,85 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>liloew 在写字</title><link>https://blog.liloew.in/</link><description>Recent content on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Thu, 21 Dec 2023 19:15:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>Rust 之闭包 - Ⅰ</title><link>https://blog.liloew.in/posts/rust-closure-1/</link><pubDate>Thu, 21 Dec 2023 19:15:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-closure-1/</guid><description>&lt;p>&lt;code>闭包&lt;/code> 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, &lt;code>闭包&lt;/code> 和 &lt;code>匿名函数&lt;/code> 在一些语境下经常互为替换, 但严格来说 &lt;code>匿名函数&lt;/code> 也即字面意义上等没有被赋予名称等函数, 而 &lt;code>闭包&lt;/code> 实际上是函数的一个实例, 相对于常规函数, &lt;code>闭包&lt;/code> 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>liloew 在写字</title><link>https://blog.liloew.in/</link><description>Recent content on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Thu, 29 Feb 2024 23:19:24 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>Pingora 初探</title><link>https://blog.liloew.in/posts/glance-of-pingora/</link><pubDate>Thu, 29 Feb 2024 23:19:24 +0800</pubDate><guid>https://blog.liloew.in/posts/glance-of-pingora/</guid><description>CloudFlare 在 2022 年中时曾发布过一篇博文 How we built Pingora, the proxy that connects Cloudflare to the Internet 介绍了其为了解决 Nginx 在实际应用场景下的诸多困境从头设计并使用 Rust 开发了一个名为 Pingora 的 代理, 并在文章中介绍将会开源该系统. 但后续针对 Pingora 便再无其他消息, 开源计划看起来也是遥遥无期, 个人也一直担心是否会像 Servo 一样胎死腹中. 但昨天 CloudFlare 在 Github 上开源了该系统相关代码 cloudflare/pingora, 同时也发布了一篇博文 Open sourcing Pingora: our Rust framework for building programmable network services 介绍了 Pingora 开发相关的工作.
+在开发 Pingora 之初, 与所有其他公司一样 CloudFlare 也考虑过通过付费以便 Nginx 背后的公司可以为其进行定制化开发和迁移到其他诸如 Envoy 等第三方代理系统, 但经长期考虑最终还是选择自行构建一个全新的代理系统, 该系统设计目标主要是 快速, 高效 和 安全. 在不舍弃 高效 和 快速 的前提下追求尽可能 安全 的目标, CloudFlare 自然地选择了 Rust 语言开发 Pingora.</description><content>&lt;p>&lt;code>CloudFlare&lt;/code> 在 2022 年中时曾发布过一篇博文 &lt;a href="https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/">How we built Pingora, the proxy that connects Cloudflare to the Internet&lt;/a> 介绍了其为了解决 &lt;code>Nginx&lt;/code> 在实际应用场景下的诸多困境从头设计并使用 &lt;code>Rust&lt;/code> 开发了一个名为 &lt;code>Pingora&lt;/code> 的 &lt;code>代理&lt;/code>, 并在文章中介绍将会开源该系统. 但后续针对 &lt;code>Pingora&lt;/code> 便再无其他消息, 开源计划看起来也是遥遥无期, 个人也一直担心是否会像 &lt;code>Servo&lt;/code> 一样胎死腹中. 但昨天 &lt;code>CloudFlare&lt;/code> 在 &lt;code>Github&lt;/code> 上开源了该系统相关代码 &lt;a href="https://github.com/cloudflare/pingora">cloudflare/pingora&lt;/a>, 同时也发布了一篇博文 &lt;a href="https://blog.cloudflare.com/pingora-open-source">Open sourcing Pingora: our Rust framework for building programmable network services&lt;/a> 介绍了 &lt;code>Pingora&lt;/code> 开发相关的工作.&lt;/p>
+&lt;p>在开发 &lt;code>Pingora&lt;/code> 之初, 与所有其他公司一样 &lt;code>CloudFlare&lt;/code> 也考虑过通过付费以便 &lt;code>Nginx&lt;/code> 背后的公司可以为其进行定制化开发和迁移到其他诸如 &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> 等第三方代理系统, 但经长期考虑最终还是选择自行构建一个全新的代理系统, 该系统设计目标主要是 &lt;code>快速&lt;/code>, &lt;code>高效&lt;/code> 和 &lt;code>安全&lt;/code>. 在不舍弃 &lt;code>高效&lt;/code> 和 &lt;code>快速&lt;/code> 的前提下追求尽可能 &lt;code>安全&lt;/code> 的目标, &lt;code>CloudFlare&lt;/code> 自然地选择了 &lt;code>Rust&lt;/code> 语言开发 &lt;code>Pingora&lt;/code>. &lt;code>Pingora&lt;/code> 被设计的不是一个完全可交付的最终产品, 而是一个可扩展的框架. 类比 &lt;code>Java&lt;/code> 生态, &lt;code>Pingora&lt;/code> 提供的更像是一个个可构建的 &lt;code>过滤器&lt;/code>, 其允许开发人员在收到来自外部的请求后可个性化地修改或拒绝该请求. 同时又要达成对于那些从事 &lt;code>Nginx&lt;/code> 开发的人员可以轻松地使用 &lt;code>Pingora&lt;/code> 进行高效地开发.&lt;/p>
+&lt;!-- raw HTML omitted -->
+&lt;p>在介绍完相关 &lt;code>Pingora&lt;/code> 开发和设计的背景后, 我们使用 &lt;code>Pingora&lt;/code> 来进行基本的开发. 首先是新建一个 &lt;code>Rust&lt;/code> 项目并添加 &lt;code>Pingora&lt;/code> 依赖:&lt;/p>
+&lt;pre tabindex="0">&lt;code>cargo new np &amp;amp;&amp;amp; cd np &amp;amp;&amp;amp; cargo add async-trait &amp;amp;&amp;amp; cargo add pingora -F lb,proxy
+&lt;/code>&lt;/pre>&lt;p>首先我们创建一个 &lt;code>Server&lt;/code> 的实例并启动它:&lt;/p>
+&lt;pre tabindex="0">&lt;code>use pingora::prelude::*;
+fn main() {
+let mut server = Server::new(None).unwrap();
+server.bootstrap();
+server.run_forever();
+}
+&lt;/code>&lt;/pre>&lt;p>现在这个 &lt;code>server&lt;/code> 还没有做任何事情, 我们再来定义一个元组性结构体 - &lt;code>LB&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>pub struct LB(Arc&amp;lt;LoadBalancer&amp;lt;RoundRobin&amp;gt;&amp;gt;);
+&lt;/code>&lt;/pre>&lt;p>&lt;code>LB&lt;/code> 内只包含一个 &lt;code>LoadBalancer&lt;/code> 结构体, 而 &lt;code>LoadBalancer&lt;/code> 结构体主要提供 &lt;code>服务发现&lt;/code>, &lt;code>健康检测&lt;/code> 和 &lt;code>后端选择&lt;/code> 能力. &lt;code>LoadBalancer&lt;/code> 在 &lt;code>pingora-load-balancing/src/lib.rs&lt;/code> 中定义如下:&lt;/p>
+&lt;pre tabindex="0">&lt;code>pub struct LoadBalancer&amp;lt;S&amp;gt; {
+backends: Backends,
+selector: ArcSwap&amp;lt;S&amp;gt;,
+/// How frequent the health check logic (if set) should run.
+///
+/// If `None`, the health check logic will only run once at the beginning.
+pub health_check_frequency: Option&amp;lt;Duration&amp;gt;,
+/// How frequent the service discovery should run.
+///
+/// If `None`, the service discovery will only run once at the beginning.
+pub update_frequency: Option&amp;lt;Duration&amp;gt;,
+/// Whether to run health check to all backends in parallel. Default is false.
+pub parallel_health_check: bool,
+}
+&lt;/code>&lt;/pre>&lt;p>同时 &lt;code>RoundRobin&lt;/code> 则是在 &lt;code>pingora-load-balancing/src/selection/algorithms.rs&lt;/code> 定义并实现了 &lt;code>SelectionAlgorithm&lt;/code> &lt;code>Trait&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>/// Round Robin selection
+pub struct RoundRobin(AtomicUsize);
+impl SelectionAlgorithm for RoundRobin {
+fn new() -&amp;gt; Self {
+Self(AtomicUsize::new(0))
+}
+fn next(&amp;amp;self, _key: &amp;amp;[u8]) -&amp;gt; u64 {
+self.0.fetch_add(1, Ordering::Relaxed) as u64
+}
+}
+&lt;/code>&lt;/pre>&lt;p>在了解以上 &lt;code>和&lt;/code> 定义后, 为了完成我们初步的代码, 还需要为新定义的 &lt;code>LB&lt;/code> 实现 &lt;code>ProxyHttp&lt;/code> &lt;code>Trait&lt;/code>. &lt;code>ProxyHttp&lt;/code> 主要用于控制 &lt;code>HTTP&lt;/code> 代理, 该 &lt;code>Trait&lt;/code> 内的方法主要包含 &lt;code>filter&lt;/code> 和 &lt;code>callback&lt;/code> 两类. 其中任意一个 &lt;code>filter&lt;/code> 返回 &lt;code>Result::Err&lt;/code> 对象都将终止继续处理该 &lt;code>HTTP&lt;/code> 请求, 同时错误将被记录. &lt;code>ProxyHttp&lt;/code> 定义了很多方法, 但只有 &lt;code>new_ctx&lt;/code> 和 &lt;code>upstream_peer&lt;/code> 是必须要实现的, 其中 &lt;code>new_ctx&lt;/code> 主要用于生成上下文 &lt;code>Context&lt;/code>, 可以在后续处理逻辑中存取对应状态; &lt;code>upstream_peer&lt;/code> 主要用于获取当前代理的 &lt;code>HTTP&lt;/code> 请求将发发往何处. 其他还有一些方法都是 &lt;code>filter&lt;/code> 和 &lt;code>callback&lt;/code> 相关的都有默认实现, 在当前可以不用考虑.&lt;/p>
+&lt;p>在暂时不为 &lt;code>LB&lt;/code> 对象设计过多逻辑的情况下可以返回一个 &lt;code>空&lt;/code> (即 &lt;code>()&lt;/code>) 的 &lt;code>Context&lt;/code> 对象:&lt;/p>
+&lt;pre tabindex="0">&lt;code>type CTX = ();
+fn new_ctx(&amp;amp;self) -&amp;gt; Self::CTX {
+}
+&lt;/code>&lt;/pre>&lt;p>另一个必须要实现的方法是 &lt;code>upstream_peer&lt;/code>, 在定义 &lt;code>LB&lt;/code> 结构体时已经声明其包含的对象是 &lt;code>LoadBalancer&amp;lt;RoundRobin&amp;gt;&lt;/code>, 因此在 &lt;code>upstream_peer&lt;/code> 方法内通过引用 &lt;code>LoadBalancer&lt;/code> 对象便可轮询地返回后端实例:&lt;/p>
+&lt;pre tabindex="0">&lt;code> async fn upstream_peer(&amp;amp;self, _session: &amp;amp;mut Session, _ctx: &amp;amp;mut ()) -&amp;gt; Result&amp;lt;Box&amp;lt;HttpPeer&amp;gt;&amp;gt; {
+let upstream = self
+.0
+.select(b&amp;#34;&amp;#34;, 256)
+.unwrap();
+info!(&amp;#34;upstream peer is: {:?}&amp;#34;, upstream);
+let peer = Box::new(HttpPeer::new(upstream, true, &amp;#34;1.1.1.1&amp;#34;.to_string()));
+Ok(peer)
+}
+&lt;/code>&lt;/pre>&lt;p>这里 &lt;code>LoadBalancer&lt;/code> 结构体提供的 &lt;code>select&lt;/code> 方法主要用于后端实例选择, 其会根据特定的选择算法返回第一个健康的后端实例, 而选择则会根据相应的 &lt;code>Hash&lt;/code> 来进行, 但针对 &lt;code>随机&lt;/code> 和 &lt;code>轮询&lt;/code> 两种选择算法而言则不关心 &lt;code>Hash&lt;/code> 值, 对应到此处由于采用的是 &lt;code>RoundRobin&lt;/code> 因此 &lt;code>Hash&lt;/code> 则无关紧要, 故而仅固定给了一个 &lt;code>b&amp;quot;&amp;quot;&lt;/code>, &lt;code>select&lt;/code> 的第二个参数是为寻找下一可用实例的 &lt;code>最大查询时间&lt;/code>.&lt;/p>
+&lt;p>至此我们已经基本完成了一个 &lt;code>HTTP&lt;/code> 代理的雏形, 但距离实际可用还有一定的距离, 如果此刻运行就会发现后端实例此刻会返回 &lt;code>403 Forbidden&lt;/code>, 这是因为在 &lt;code>HTTP&lt;/code> 的请求头里还包含了 &lt;code>Host&lt;/code> 信息, 而任何遵守 &lt;code>RFC 7231&lt;/code> 的客户端而言其在发起 &lt;code>HTTP&lt;/code> 请求前都会根据其欲访问的地址设置对应的 &lt;code>Host&lt;/code> 请求头, 此刻在经过 &lt;code>Pingora&lt;/code> 代理后会服务端会发现其收到的 &lt;code>HTTP&lt;/code> 请求并非是访问当前后端的, 故而拒绝响应. 如果想正常访问我们必须在经过 &lt;code>Pingora&lt;/code> 代理时将请求头的 &lt;code>Host&lt;/code> 改写为代理后的后端实例地址即可. 正如前文所述, 我们可以利用 &lt;code>ProxyHttp&lt;/code> 里面对应的 &lt;code>filter&lt;/code> 来实现:&lt;/p>
+&lt;pre tabindex="0">&lt;code> async fn upstream_request_filter(&amp;amp;self, _session: &amp;amp;mut Session, upstream_request: &amp;amp;mut RequestHeader, _ctx: &amp;amp;mut Self::CTX) -&amp;gt; Result&amp;lt;()&amp;gt; {
+upstream_request.insert_header(&amp;#34;Host&amp;#34;, &amp;#34;192.168.1.1&amp;#34;).unwrap();
+Ok(())
+}
+&lt;/code>&lt;/pre>&lt;p>至此已经完成了一个 &lt;code>HTTP&lt;/code> 代理的主体部分, 剩余的工作就是如何将定义的 &lt;code>LB&lt;/code> 应用到之前创建的 &lt;code>Server&lt;/code> 上. &lt;code>Server&lt;/code> 提供了一个 &lt;code>add_service&lt;/code> 方法可将对应的 &lt;code>Service&lt;/code> 绑定到服务上:&lt;/p>
+&lt;pre tabindex="0">&lt;code> let upstreams = LoadBalancer::try_from_iter([&amp;#34;192.168.1.1:443&amp;#34;, &amp;#34;192.168.1.2:443&amp;#34;]).unwrap();
+let mut lb = http_proxy_service(&amp;amp;server.configuration, LB(Arc::new(upstreams)));
+lb.add_tcp(&amp;#34;0.0.0.0:1234&amp;#34;);
+server.add_service(lb);
+&lt;/code>&lt;/pre>&lt;p>首先通过 &lt;code>LoadBalancer&lt;/code> 定义了两个后端实例 &lt;code>192.168.1.1:443&lt;/code> 和 &lt;code>192.168.1.2:443&lt;/code>, 接着再通过 &lt;code>http_proxy_service&lt;/code> 将定义的实例绑定到之前声明的 &lt;code>LB&lt;/code> 上, 最终将其添加到 &lt;code>Pingora&lt;/code> 服务上.&lt;/p>
+&lt;p>在完成了以上代码后, 可以通过 &lt;code>cargo run&lt;/code> 运行并通过 &lt;code>curl&lt;/code> 模拟测试, 以下是后台输出日志:&lt;/p>
+&lt;pre tabindex="0">&lt;code>Upstream peer is: Backend { addr: Inet(192.168.1.1:443), weight: 1 }
+Upstream peer is: Backend { addr: Inet(192.168.1.2:443), weight: 1 }
+Upstream peer is: Backend { addr: Inet(192.168.1.1:443), weight: 1 }
+Upstream peer is: Backend { addr: Inet(192.168.1.2:443), weight: 1 }
+&lt;/code>&lt;/pre>&lt;p>从以上日志可以看出当前代理服务缺失以轮询的方式访问后端实例.&lt;/p>
+&lt;h1 id="后记">后记&lt;/h1>
+&lt;p>当前 &lt;code>Pingora&lt;/code> 仍然有待完善, 首先 &lt;code>API&lt;/code> 稳定性并不能保证, 后续可能随着版本研究或是功能迭代可能变化, 另一个问题是对非 &lt;code>Unix&lt;/code> 系统的支持并不在路线图中.&lt;/p>
+&lt;h1 id="ref">REF&lt;/h1>
+&lt;ol>
+&lt;li>&lt;a href="https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/">How we built Pingora, the proxy that connects Cloudflare to the Internet&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://github.com/cloudflare/pingora">cloudflare/pingora&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://blog.cloudflare.com/pingora-open-source">Open sourcing Pingora: our Rust framework for building programmable network services&lt;/a>&lt;/li>
+&lt;/ol></content></item><item><title>Rust 之闭包 - Ⅰ</title><link>https://blog.liloew.in/posts/rust-closure-1/</link><pubDate>Thu, 21 Dec 2023 19:15:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-closure-1/</guid><description>&lt;p>&lt;code>闭包&lt;/code> 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, &lt;code>闭包&lt;/code> 和 &lt;code>匿名函数&lt;/code> 在一些语境下经常互为替换, 但严格来说 &lt;code>匿名函数&lt;/code> 也即字面意义上等没有被赋予名称等函数, 而 &lt;code>闭包&lt;/code> 实际上是函数的一个实例, 相对于常规函数, &lt;code>闭包&lt;/code> 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:&lt;/p>
 &lt;pre tabindex="0">&lt;code>f(x) = g(x) + h(y)
 &lt;/code>&lt;/pre>&lt;p>这里函数 &lt;code>f(x)&lt;/code> 可以表示为关于 &lt;code>x&lt;/code> 和 &lt;code>y&lt;/code> 的函数, 而函数 &lt;code>f&lt;/code> 中无 &lt;code>y&lt;/code> 的信息(相对的是 &lt;code>f(x, y)&lt;/code>), 即 &lt;code>y&lt;/code> 是自由变量. 除了本文介绍的 &lt;code>Rust&lt;/code> 外其他诸如 &lt;code>Swift&lt;/code>, &lt;code>Go&lt;/code>, &lt;code>Erlang&lt;/code>, &lt;code>JavaScript&lt;/code>, &lt;code>Python&lt;/code> 等都有 &lt;code>闭包&lt;/code>.&lt;/p></description><content>&lt;p>&lt;code>闭包&lt;/code> 是在以函数作为一等公民等编程语言中实现词法绑定等一种技术, &lt;code>闭包&lt;/code> 和 &lt;code>匿名函数&lt;/code> 在一些语境下经常互为替换, 但严格来说 &lt;code>匿名函数&lt;/code> 也即字面意义上等没有被赋予名称等函数, 而 &lt;code>闭包&lt;/code> 实际上是函数的一个实例, 相对于常规函数, &lt;code>闭包&lt;/code> 可以捕捉环境上下文环境中的自由变量, 从一般定义来说即:&lt;/p>
 &lt;pre tabindex="0">&lt;code>f(x) = g(x) + h(y)
