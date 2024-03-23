@@ -1,4 +1,198 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on liloew 在写字</title><link>https://blog.liloew.in/posts/</link><description>Recent content in Posts on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Thu, 29 Feb 2024 23:19:24 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Pingora 初探</title><link>https://blog.liloew.in/posts/glance-of-pingora/</link><pubDate>Thu, 29 Feb 2024 23:19:24 +0800</pubDate><guid>https://blog.liloew.in/posts/glance-of-pingora/</guid><description>CloudFlare 在 2022 年中时曾发布过一篇博文 How we built Pingora, the proxy that connects Cloudflare to the Internet 介绍了其为了解决 Nginx 在实际应用场景下的诸多困境从头设计并使用 Rust 开发了一个名为 Pingora 的 代理, 并在文章中介绍将会开源该系统. 但后续针对 Pingora 便再无其他消息, 开源计划看起来也是遥遥无期, 个人也一直担心是否会像 Servo 一样胎死腹中. 但昨天 CloudFlare 在 Github 上开源了该系统相关代码 cloudflare/pingora, 同时也发布了一篇博文 Open sourcing Pingora: our Rust framework for building programmable network services 介绍了 Pingora 开发相关的工作.
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on liloew 在写字</title><link>https://blog.liloew.in/posts/</link><description>Recent content in Posts on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sat, 23 Mar 2024 20:47:24 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>通过 Pingora 构建应用网关</title><link>https://blog.liloew.in/posts/build-gateway-with-pingora/</link><pubDate>Sat, 23 Mar 2024 20:47:24 +0800</pubDate><guid>https://blog.liloew.in/posts/build-gateway-with-pingora/</guid><description>上一篇文章介绍了 CloudFlare 开源的网络框架 Pingora, 此篇文章我们使用该框架从零到一实作一个应用网关. 目前大规模应用的网关主要分为三大类, 一类是以传统 C 语言开发的 Nginx 为基础并通过 Lua 进行扩展的网关, 诸如 OpenResty, Kong 等便是如此; 一类则在诞生之初便完全为云原生提供解决方案的代理, 诸如 Envoy, Linkerd2 和 Cilium (严格说来 Cilium 划分在网关代理类并不合适); 最后一类便是和应用深度绑定的应用网关, 如 Spring Cloud Gateway. 从今天的视角看 Spring Cloud 微服务的模式与云原生存在较大的竞合, 同时 微服务, 注册中心 等概念被 Kubernetes 的不同 Service 通过类 DNS 模式一一种优雅的方式解决, 这也导致了 Spring Cloud Gateway 模块在 Kubernetes 集群内尴尬的境地.
+开发中经常面对一种场景是微服务部署到 Kubernetes 内本地无法调试的问题和多应用集群内应用间相互调用的问题. 我们这里通过 Pingora 构建的应用网关主要便是为解决此特定场景下请求转发与应用鉴权的工作, 同时在此基础上可做进一步扩展.
+首先声明一个 Gateway 结构体作为网关的主体, 后续有需要时可通过扩展该结构体以绑定资源, 实现一些高级功能.
+#[derive(Debug, Default)] pub struct Gateway { } 在定义完 Gateway 后, 考虑到 TCP 连接特性我们再定义一个 Host 元组结构体以反映不同服务对应的 IP 和 Port:</description><content>&lt;p>&lt;a href="https://blog.liloew.in/posts/glance-of-Pingora/">上一篇文章&lt;/a>介绍了 &lt;code>CloudFlare&lt;/code> 开源的网络框架 &lt;code>Pingora&lt;/code>, 此篇文章我们使用该框架从零到一实作一个应用网关. 目前大规模应用的网关主要分为三大类, 一类是以传统 &lt;code>C&lt;/code> 语言开发的 &lt;code>Nginx&lt;/code> 为基础并通过 &lt;code>Lua&lt;/code> 进行扩展的网关, 诸如 &lt;code>OpenResty&lt;/code>, &lt;code>Kong&lt;/code> 等便是如此; 一类则在诞生之初便完全为云原生提供解决方案的代理, 诸如 &lt;code>Envoy&lt;/code>, &lt;code>Linkerd2&lt;/code> 和 &lt;code>Cilium&lt;/code> (严格说来 &lt;code>Cilium&lt;/code> 划分在网关代理类并不合适); 最后一类便是和应用深度绑定的应用网关, 如 &lt;code>Spring Cloud Gateway&lt;/code>. 从今天的视角看 &lt;code>Spring Cloud&lt;/code> 微服务的模式与云原生存在较大的竞合, 同时 &lt;code>微服务&lt;/code>, &lt;code>注册中心&lt;/code> 等概念被 &lt;code>Kubernetes&lt;/code> 的不同 &lt;code>Service&lt;/code> 通过类 &lt;code>DNS&lt;/code> 模式一一种优雅的方式解决, 这也导致了 &lt;code>Spring Cloud Gateway&lt;/code> 模块在 &lt;code>Kubernetes&lt;/code> 集群内尴尬的境地.&lt;/p>
+&lt;p>开发中经常面对一种场景是微服务部署到 &lt;code>Kubernetes&lt;/code> 内本地无法调试的问题和多应用集群内应用间相互调用的问题. 我们这里通过 &lt;code>Pingora&lt;/code> 构建的应用网关主要便是为解决此特定场景下请求转发与应用鉴权的工作, 同时在此基础上可做进一步扩展.&lt;/p>
+&lt;!-- raw HTML omitted -->
+&lt;p>首先声明一个 &lt;code>Gateway&lt;/code> 结构体作为网关的主体, 后续有需要时可通过扩展该结构体以绑定资源, 实现一些高级功能.&lt;/p>
+&lt;pre tabindex="0">&lt;code>#[derive(Debug, Default)]
+pub struct Gateway {
+}
+&lt;/code>&lt;/pre>&lt;p>在定义完 &lt;code>Gateway&lt;/code> 后, 考虑到 &lt;code>TCP&lt;/code> 连接特性我们再定义一个 &lt;code>Host&lt;/code> 元组结构体以反映不同服务对应的 &lt;code>IP&lt;/code> 和 &lt;code>Port&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>#[derive(Debug, Default)]
+pub struct Host(String, u32);
+&lt;/code>&lt;/pre>&lt;p>同时应用网关一个核心职责便是路由映射, 即将 &lt;code>URL&lt;/code> &lt;code>A&lt;/code> 映射到 &lt;code>B&lt;/code> 上, 这里的 &lt;code>B&lt;/code> 不一定是原服务也不一定是本集群内的服务.&lt;/p>
+&lt;pre tabindex="0">&lt;code>#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = &amp;#34;camelCase&amp;#34;)]
+pub struct URL {
+pub service_name: String,
+pub origin_url: String,
+pub mapping_url: String,
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = &amp;#34;camelCase&amp;#34;)]
+pub struct Auth {
+#[serde(default)]
+pub client_id: String,
+#[serde(default)]
+pub client_secret: String,
+#[serde(default)]
+pub client_credentials: String,
+#[serde(default)]
+pub urls: Vec&amp;lt;URL&amp;gt;,
+}
+&lt;/code>&lt;/pre>&lt;p>这里分别定义了 &lt;code>URL&lt;/code> 和 &lt;code>Auth&lt;/code> 结构体, 其中 &lt;code>URL&lt;/code> 主要功能是完成 &lt;code>URI&lt;/code> 的一对一转换, &lt;code>Auth&lt;/code> 主要是为了在应用网关上进行细粒度的权限控制.&lt;/p>
+&lt;p>另外在上一篇文章中已经介绍了 &lt;code>Pingora&lt;/code> 提供的代理能力主要通过 &lt;code>ProxyHttp&lt;/code> 这个 &lt;code>Trait&lt;/code> 提供, 具体的 &lt;code>ProxyHttp&lt;/code> 包含了多个方法以在 &lt;code>HTTP&lt;/code> 请求不同阶段进行拦截以便达到 &lt;code>短路请求&lt;/code> , &lt;code>获取节点&lt;/code>, &lt;code>修改请求正文&lt;/code>(&lt;code>修改请求正文头&lt;/code>) 和 &lt;code>修改响应正文&lt;/code>(&lt;code>修改响应正文头&lt;/code>) 等操作. 详细的处理流程可参考 &lt;a href="https://github.com/cloudflare/pingora/blob/main/docs/user_guide/phase_chart.md">Pingora Phase Chart&lt;/a>&lt;/p>
+&lt;p>我们首先为 &lt;code>Gateway&lt;/code> 实现 &lt;code>new_ctx&lt;/code> 生成一个 &lt;code>Context&lt;/code> 以便在后续报文交互过程中获取上下文环境:&lt;/p>
+&lt;pre tabindex="0">&lt;code> type CTX = Arc&amp;lt;Mutex&amp;lt;HashMap&amp;lt;String, Auth&amp;gt;&amp;gt;&amp;gt;;
+fn new_ctx(&amp;amp;self) -&amp;gt; Self::CTX {
+APPS.clone()
+}
+&lt;/code>&lt;/pre>&lt;p>此处 &lt;code>new_ctx&lt;/code> 方法主要是返回一个通过 &lt;code>lazy_static&lt;/code> 声明的 &lt;code>Arc&lt;/code> 单例以便在不同线程间可进行状态共享, 更一般地说此处的 &lt;code>APPS&lt;/code> 主要目的在于根据 &lt;code>ServiceName&lt;/code> 和 &lt;code>URL&lt;/code> 进行精细化地权限控制. &lt;code>APPS&lt;/code> 具体的定义为:&lt;/p>
+&lt;pre tabindex="0">&lt;code>lazy_static! {
+pub static ref APPS: Arc&amp;lt;Mutex&amp;lt;HashMap&amp;lt;String, Auth&amp;gt;&amp;gt;&amp;gt; = {
+let mut m: HashMap&amp;lt;String, Auth&amp;gt; = HashMap::new();
+Arc::new(Mutex::new(m))
+};
+}
+&lt;/code>&lt;/pre>&lt;p>除上下文环境外网关的首要步骤便是获取下游服务节点, 根据前文引用的流程图可以知道此时可通过 &lt;code>upstream_peer&lt;/code> 方法来实现(&lt;code>CloudFlare&lt;/code> 使用的场景中任务节点是 &lt;code>上游&lt;/code>, 而在本文构建的应用网关场景下则认为称作 &lt;code>下游&lt;/code>, 所服务对象不同称呼不同而已, 不脱离具体语境下不混淆即可):&lt;/p>
+&lt;pre tabindex="0">&lt;code>async fn upstream_peer(
+&amp;amp;self,
+session: &amp;amp;mut Session,
+ctx: &amp;amp;mut Self::CTX,
+) -&amp;gt; Result&amp;lt;Box&amp;lt;HttpPeer&amp;gt;&amp;gt;;
+&lt;/code>&lt;/pre>&lt;p>&lt;code>upstream_peer&lt;/code> 会返回一个 &lt;code>Result&lt;/code> 类型, 如果获取服务失败或是其他原因通过 &lt;code>Err&lt;/code> 返回即可.&lt;/p>
+&lt;p>为简化此处应用网关逻辑首先需要约定一个关于路由的共识, 假设所有经过 &lt;code>Gateway&lt;/code> 的 &lt;code>HTTP&lt;/code> 请求均需满足 &lt;code>/service-a[:port]/service-a/x/y/z&lt;/code> 形式. 其中第一个 &lt;code>service-a[:port]&lt;/code> 中的 &lt;code>service-a&lt;/code> 为网关需转发的 &lt;code>Service&lt;/code>, 也即 &lt;code>Kubernetes&lt;/code> 中的不同服务, 而 &lt;code>[:port]&lt;/code> 为可选的端口参数, 已解决采用 &lt;code>ClusterIP&lt;/code> 类型的服务使用非 &lt;code>80&lt;/code> 端口; 第二个 &lt;code>service-a&lt;/code> 为对应 &lt;code>Service&lt;/code> 下接收 &lt;code>HTTP&lt;/code> 请求的公共前缀, 以便于不同网络请求进行区分. 如果是 &lt;code>Spring Boot&lt;/code> 应用可通过 &lt;code>server.servlet.context-path&lt;/code> 进行统一配置; &lt;code>/x/y/z&lt;/code> 为可选的应用实际响应请求的路径.&lt;/p>
+&lt;p>&lt;code>upstream_peer&lt;/code> 方法入参包含一个 &lt;code>可变&lt;/code> 的 &lt;code>Session&lt;/code> 对象和 &lt;code>CTX&lt;/code> 对象, 因此可通过 &lt;code>Session&lt;/code> 首先获得请求头 和 &lt;code>URI&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let header = session.req_header();
+let mut uri = header.uri.clone();
+&lt;/code>&lt;/pre>&lt;p>由于上面的 &lt;code>req_header()&lt;/code> 获取到的是 &lt;code>RequestHeader&lt;/code> 对象的引用, 而 &lt;code>RequestHeader&lt;/code> 为 &lt;code>http::request::Parts&lt;/code> 类型实现了 &lt;code>Deref&lt;/code>, 因此可直接通过上面的 &lt;code>header&lt;/code> 对象获取 &lt;code>HTTP&lt;/code> &lt;code>Method&lt;/code>, 这样便可直接根据 &lt;code>GET&lt;/code>, &lt;code>POST&lt;/code>, &lt;code>PUT&lt;/code> 以及其他的 &lt;code>HTTP&lt;/code> 方法进行进一步处理.&lt;/p>
+&lt;p>接下来便需要将 &lt;code>ServiceName&lt;/code> 转换为 &lt;code>IP&lt;/code> 形式以便后续通过 `` 建立 &lt;code>TCP&lt;/code> 连接:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let service_names = uris[1].split(&amp;#34;:&amp;#34;).collect::&amp;lt;Vec&amp;lt;_&amp;gt;&amp;gt;();
+let service_name = if service_names.len() == 2 {
+Host(service_names[0].to_string(), service_names[1].parse::&amp;lt;u32&amp;gt;().unwrap())
+} else if service_names.len() == 1{
+Host(service_names[0].to_string(), 80)
+} else {
+// TODO:
+panic!(&amp;#34;service_names is valid&amp;#34;);
+};
+let ips = lookup_host(&amp;amp;service_name.0).unwrap();
+let ips = ips.iter().filter(|&amp;amp;&amp;amp;ip| ip.is_ipv4()).last().unwrap();
+&lt;/code>&lt;/pre>&lt;p>这里在倒数第二行的地方通过调用 &lt;code>lookup_host&lt;/code> 进行 &lt;code>DNS&lt;/code> 解析以便获得对应 &lt;code>Service&lt;/code> 的真实 &lt;code>ClusterIP&lt;/code>. 有一个常识就是 &lt;code>Kubernetes&lt;/code> 通过采用 &lt;code>DNS&lt;/code> 域名解析的形式进行服务发现与路由. 另外值得一提的时这里虽然定义了两次 &lt;code>ips&lt;/code> 变量, 但是 &lt;code>Rust&lt;/code> 采用了 &lt;code>同名覆盖&lt;/code> 语法因此这里不会有问题.&lt;/p>
+&lt;p>在解析完 &lt;code>Service&lt;/code> 另一个需要进行的操作就是修改原 &lt;code>HTTP&lt;/code> 请求的 &lt;code>URL&lt;/code> 为真实的 &lt;code>URL&lt;/code>:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let mut uri_builder = Uri::builder();
+if let Some(a) = uri.authority() {
+uri_builder = uri_builder.authority(a.to_string());
+}
+if let Some(&amp;amp;ref a) = uri.scheme() {
+uri_builder = uri_builder.scheme(a.to_string().as_str());
+}
+if let Some(a) = uri.path_and_query() {
+let s = a.to_string();
+let path_and_query = format!(&amp;#34;/{}&amp;#34;, s.split(&amp;#34;/&amp;#34;).collect::&amp;lt;Vec&amp;lt;_&amp;gt;&amp;gt;()[2..].join(&amp;#34;/&amp;#34;));
+println!(&amp;#34;path_and_query: {}&amp;#34;, path_and_query);
+uri_builder = uri_builder.path_and_query(path_and_query);
+}
+let uri = uri_builder.build().unwrap();
+session.req_header_mut().set_uri(uri);
+let _ = session.req_header_mut().insert_header(&amp;#34;Host&amp;#34;, service_name.0.clone());
+&lt;/code>&lt;/pre>&lt;p>由于在此处进行修改 &lt;code>URL&lt;/code> 所以原 &lt;code>HTTP&lt;/code> 请求中附带的 &lt;code>Authority&lt;/code> 和 &lt;code>Scheme&lt;/code> 等信息需要保留, 同时为满足 &lt;code>RFC 7231&lt;/code> 中关于 &lt;code>HTTP/1.1&lt;/code> 的定义与要求, 这里 &lt;code>Host&lt;/code> 请求头也需要针对此前转换后端 &lt;code>ServiceName&lt;/code> 进行修改. 如果不修改的话 &lt;code>Host&lt;/code> 中存储的信息仍然是指向 &lt;code>Gateway&lt;/code> 网关的, 真实的 &lt;code>Service&lt;/code> 有理由拒绝响应.&lt;/p>
+&lt;p>在 &lt;code>upstream_peer&lt;/code> 方法的最后根据处理结果返回一个 &lt;code>Result&lt;/code> 类型即可, 按照上述逻辑如无以为则返回一个 &lt;code>Ok(Box&amp;lt;HttpPeer&amp;gt;)&lt;/code> 对象即可:&lt;/p>
+&lt;pre tabindex="0">&lt;code>let peer = HttpPeer::new(peer, false, &amp;#34;&amp;#34;.to_string());
+Ok(Box::new(peer))
+&lt;/code>&lt;/pre>&lt;p>在网关进行请求转发的过程中进行权限校验和 &lt;code>Token&lt;/code> 验证是必不可少的步骤, 依据 &lt;code>Pingora&lt;/code> 中关于请求的处理流程可以在 &lt;code>upstream_request_filter&lt;/code> 方法中进行处理, 该方法会返回一个 &lt;code>Result&lt;/code> 对象, 如果是 &lt;code>Some(())&lt;/code> 的话则链路会继续向下流转否则则提前退出并向 &lt;code>HTTP&lt;/code> 客户端返回具体的 &lt;code>Err&lt;/code> 数据. 这里仅提供一个参考实现.&lt;/p>
+&lt;pre tabindex="0">&lt;code>async fn upstream_request_filter(
+&amp;amp;self,
+_session: &amp;amp;mut Session,
+upstream_request: &amp;amp;mut RequestHeader,
+_ctx: &amp;amp;mut Self::CTX,
+) -&amp;gt; Result&amp;lt;()&amp;gt; {
+let auth = _ctx.lock().unwrap();
+println!(&amp;#34;Header: {:?}&amp;#34;, upstream_request.headers);
+let authorization = upstream_request.headers.get(&amp;#34;Authorization&amp;#34;);
+match authorization {
+Some(authorization) =&amp;gt; {
+let token = authorization.to_str().unwrap();
+let claims = verify(token);
+let state = match claims {
+Some(claims) =&amp;gt; {
+let a = auth.get::&amp;lt;String&amp;gt;(&amp;amp;claims.sub);
+match a {
+Some(v) =&amp;gt; {
+if v.urls.iter().any(|u| u.mapping_url.eq(upstream_request.uri.path())) {
+Some(())
+} else {
+None
+}
+},
+None =&amp;gt; None,
+}
+},
+None =&amp;gt; None,
+};
+if let Some(_) = state {
+return Ok(());
+}
+Err(Box::new(Error {
+etype: ErrorType::InternalError,
+esource: ErrorSource::Internal,
+retry: RetryType::ReusedOnly,
+cause: None,
+context: None,
+}))
+},
+None =&amp;gt; {
+Ok(())
+},
+}
+}
+&lt;/code>&lt;/pre>&lt;p>上面 &lt;code>upstream_request_filter&lt;/code> 方法的核心逻辑在于获取 &lt;code>HTTP&lt;/code> 请求头中的 &lt;code>Authorization&lt;/code>, 然后通过 &lt;code>verify&lt;/code> 方法验证并解析 &lt;code>JWT&lt;/code> 信息以便获得特定的信息. &lt;code>JWT&lt;/code> 中存放了 &lt;code>Claims&lt;/code> 信息 - 合法请求的话, 非法请求姑且不论, 而 &lt;code>Claims&lt;/code> 结构体则包含了具体的 `` 等信息:&lt;/p>
+&lt;pre tabindex="0">&lt;code>pub struct Claims {
+pub iss: String, // Issuer of the JWT
+pub sub: String, // Subject of the JWT (the user)
+pub exp: u64, // Time after which the JWT expires
+pub nbf: u64, // Time before which the JWT must not be accepted for processing
+pub iat: u64, // Time at which the JWT was issued; can be used to determine age of the JWT
+pub jti: Option&amp;lt;String&amp;gt;, // Unique identifier; can be used to prevent the JWT from being replayed (allows a token to be used only once)
+}
+&lt;/code>&lt;/pre>&lt;p>在解析得到 &lt;code>client_id&lt;/code> 后便可根据此前定义的 &lt;code>CTX&lt;/code> 上下文对象进一步获取关于权限和 &lt;code>URL&lt;/code> 的定义以进一步进行权限控制.&lt;/p>
+&lt;h2 id="补充">补充&lt;/h2>
+&lt;p>上文中通过实现 &lt;code>new_ctx&lt;/code>, &lt;code>upstream_peer&lt;/code> 和 &lt;code>upstream_request_filter&lt;/code> 三个方法实现了一个初版的 &lt;code>Gateway&lt;/code>, 但未涉及到关于权限信息的处理, 这里可通过订阅 &lt;code>Kafka&lt;/code> 消息来实时更新 &lt;code>APPS&lt;/code> 数据.&lt;/p>
+&lt;pre tabindex="0">&lt;code>fn consumer_topic(brokers: &amp;amp;str, topics: &amp;amp;[&amp;amp;str], consumer_id: &amp;amp;str) {
+println!(&amp;#34;KAFAK Consumer config: {brokers:?} {topics:?} {consumer_id:?}&amp;#34;);
+let consumer: BaseConsumer = ClientConfig::new()
+.set(&amp;#34;bootstrap.servers&amp;#34;, brokers)
+.set(&amp;#34;group.id&amp;#34;, consumer_id)
+.create()
+.unwrap();
+consumer.subscribe(topics)
+.unwrap();
+for msg in consumer.iter() {
+match msg {
+Ok(m) =&amp;gt; {
+let payload = match m.payload_view::&amp;lt;str&amp;gt;() {
+None =&amp;gt; None,
+Some(Ok(v)) =&amp;gt; Some(v),
+Some(Err(err)) =&amp;gt; None,
+};
+if payload.is_some() {
+println!(&amp;#34;Message: {:?}&amp;#34;, payload.unwrap());
+let auth = serde_json::from_str::&amp;lt;Auth&amp;gt;(&amp;amp;payload.unwrap());
+match auth {
+Ok(auth) =&amp;gt; {
+// TODO: partial update auth
+println!(&amp;#34;Auth: {:?}&amp;#34;, auth);
+let mut m = APPS.lock().unwrap();
+println!(&amp;#34;ClientId: {:?} Auth: {:?}&amp;#34;, auth.client_id, m.get(&amp;amp;auth.client_id));
+m.insert(auth.client_id.clone(), auth);
+},
+Err(err) =&amp;gt; {
+println!(&amp;#34;Error: {:?}&amp;#34;, err);
+}
+}
+}
+},
+Err(err) =&amp;gt; {
+},
+}
+}
+}
+&lt;/code>&lt;/pre>&lt;h2 id="ref">REF&lt;/h2>
+&lt;ol>
+&lt;li>&lt;a href="https://github.com/cloudflare/pingora">cloudflare/pingora&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://datatracker.ietf.org/doc/html/rfc7231">RFC 7231 - Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content&lt;/a>&lt;/li>
+&lt;/ol></content></item><item><title>Pingora 初探</title><link>https://blog.liloew.in/posts/glance-of-pingora/</link><pubDate>Thu, 29 Feb 2024 23:19:24 +0800</pubDate><guid>https://blog.liloew.in/posts/glance-of-pingora/</guid><description>CloudFlare 在 2022 年中时曾发布过一篇博文 How we built Pingora, the proxy that connects Cloudflare to the Internet 介绍了其为了解决 Nginx 在实际应用场景下的诸多困境从头设计并使用 Rust 开发了一个名为 Pingora 的 代理, 并在文章中介绍将会开源该系统. 但后续针对 Pingora 便再无其他消息, 开源计划看起来也是遥遥无期, 个人也一直担心是否会像 Servo 一样胎死腹中. 但昨天 CloudFlare 在 Github 上开源了该系统相关代码 cloudflare/pingora, 同时也发布了一篇博文 Open sourcing Pingora: our Rust framework for building programmable network services 介绍了 Pingora 开发相关的工作.
 在开发 Pingora 之初, 与所有其他公司一样 CloudFlare 也考虑过通过付费以便 Nginx 背后的公司可以为其进行定制化开发和迁移到其他诸如 Envoy 等第三方代理系统, 但经长期考虑最终还是选择自行构建一个全新的代理系统, 该系统设计目标主要是 快速, 高效 和 安全. 在不舍弃 高效 和 快速 的前提下追求尽可能 安全 的目标, CloudFlare 自然地选择了 Rust 语言开发 Pingora.</description><content>&lt;p>&lt;code>CloudFlare&lt;/code> 在 2022 年中时曾发布过一篇博文 &lt;a href="https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/">How we built Pingora, the proxy that connects Cloudflare to the Internet&lt;/a> 介绍了其为了解决 &lt;code>Nginx&lt;/code> 在实际应用场景下的诸多困境从头设计并使用 &lt;code>Rust&lt;/code> 开发了一个名为 &lt;code>Pingora&lt;/code> 的 &lt;code>代理&lt;/code>, 并在文章中介绍将会开源该系统. 但后续针对 &lt;code>Pingora&lt;/code> 便再无其他消息, 开源计划看起来也是遥遥无期, 个人也一直担心是否会像 &lt;code>Servo&lt;/code> 一样胎死腹中. 但昨天 &lt;code>CloudFlare&lt;/code> 在 &lt;code>Github&lt;/code> 上开源了该系统相关代码 &lt;a href="https://github.com/cloudflare/pingora">cloudflare/pingora&lt;/a>, 同时也发布了一篇博文 &lt;a href="https://blog.cloudflare.com/pingora-open-source">Open sourcing Pingora: our Rust framework for building programmable network services&lt;/a> 介绍了 &lt;code>Pingora&lt;/code> 开发相关的工作.&lt;/p>
 &lt;p>在开发 &lt;code>Pingora&lt;/code> 之初, 与所有其他公司一样 &lt;code>CloudFlare&lt;/code> 也考虑过通过付费以便 &lt;code>Nginx&lt;/code> 背后的公司可以为其进行定制化开发和迁移到其他诸如 &lt;a href="https://www.envoyproxy.io/">Envoy&lt;/a> 等第三方代理系统, 但经长期考虑最终还是选择自行构建一个全新的代理系统, 该系统设计目标主要是 &lt;code>快速&lt;/code>, &lt;code>高效&lt;/code> 和 &lt;code>安全&lt;/code>. 在不舍弃 &lt;code>高效&lt;/code> 和 &lt;code>快速&lt;/code> 的前提下追求尽可能 &lt;code>安全&lt;/code> 的目标, &lt;code>CloudFlare&lt;/code> 自然地选择了 &lt;code>Rust&lt;/code> 语言开发 &lt;code>Pingora&lt;/code>. &lt;code>Pingora&lt;/code> 被设计的不是一个完全可交付的最终产品, 而是一个可扩展的框架. 类比 &lt;code>Java&lt;/code> 生态, &lt;code>Pingora&lt;/code> 提供的更像是一个个可构建的 &lt;code>过滤器&lt;/code>, 其允许开发人员在收到来自外部的请求后可个性化地修改或拒绝该请求. 同时又要达成对于那些从事 &lt;code>Nginx&lt;/code> 开发的人员可以轻松地使用 &lt;code>Pingora&lt;/code> 进行高效地开发.&lt;/p>
 &lt;!-- raw HTML omitted -->
