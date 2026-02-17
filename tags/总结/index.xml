@@ -1,4 +1,53 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>总结 on liloew 在写字</title><link>https://blog.liloew.in/tags/%E6%80%BB%E7%BB%93/</link><description>Recent content in 总结 on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sat, 18 Jan 2025 23:36:31 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/%E6%80%BB%E7%BB%93/index.xml" rel="self" type="application/rss+xml"/><item><title>2024年终总结</title><link>https://blog.liloew.in/posts/2024-in-review/</link><pubDate>Sat, 18 Jan 2025 23:36:31 +0800</pubDate><guid>https://blog.liloew.in/posts/2024-in-review/</guid><description>今天是 除夕, 决定花时间写一下 2024 年总结, 既是对过去一年工作的回顾，也是对自我的不断完善. 2023 年因各种因素没有做年终总结, 后续还是要严格敦促自己.
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>总结 on liloew 在写字</title><link>https://blog.liloew.in/tags/%E6%80%BB%E7%BB%93/</link><description>Recent content in 总结 on liloew 在写字</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Mon, 16 Feb 2026 23:12:36 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/%E6%80%BB%E7%BB%93/index.xml" rel="self" type="application/rss+xml"/><item><title>2025 年终总结</title><link>https://blog.liloew.in/posts/2025-in-review/</link><pubDate>Mon, 16 Feb 2026 23:12:36 +0800</pubDate><guid>https://blog.liloew.in/posts/2025-in-review/</guid><description>目前来看除夕夜写年终总结确实是一个不错的时间节点，一方面正好是完整的一个农历年，另一方面来说当是守岁。
+工作 今年工作上有一些调整，先是年中的时候参与到智能体的一个项目中接着又是产品线调整进入一个新的业务。目前国内智能体平台普通在易用性上都不太行，又由于是“新技术”（或者说新产品）在稳定性上面相对于主流开源平台还是有不小差距的，比较典型的两个问题，一个是在开发上线过程中模型被修改竟然无法定位到具体原因，另一个则是开发过程中经常发现之前调试或已上线功能不可用。对于国内这些智能体开发平台来说真正可用还需要一定时间。
+另外就是对于新业务和新团队，一方面有很多业务知识需要补充，又是需要高频学习的阶段；另一方面是管理的混乱，只从技术角度去说的话一方面是系统没有经过良好的设计，只是一味实现需求，至于对既有业务系统影响以及后续扩展和可维护性上面存在比较大的欠缺。
+学习 今年最大的遗憾就是没有按期完成小论文，先是和导师沟通在国庆把初稿投出去，然后中间实验不是很顺利一直拖到了元旦，再然后是元旦期间又因为在论文内容和公式推导细节上进展缓慢。在终于把初稿投出去后就是和编辑那边相互卷了，审稿人无论是一轮还是二轮给的意见都很专业也不太好回复。网上看了相关讨论说是可以向编辑申请延期，但我始终觉着如果一件事情不能在今天完成那么明天也将完不成，所以宁愿在春节期间修改也没有向编辑申请延期。当然编辑在最后一个工作日也友善地发邮件过来询问是否有困难和已经开始修改稿件，在回邮件中礼貌地表达感谢并表示由于春节原因可能有一些影响但会赶在 DDL 之前完成相关补充实验和论文修改。
+关于学习这方面只能说但愿顺利吧。
+技术 Rust! Rust! Rust! 如果说去年是学习Rust的一年那么今年应该说是实践的一年。目前在工作之外的一些代码都尽可能地用Rust来写了，同时针对工作上的一些代码也会思考如果用Rust该如何实现，从代码量上来说 Rust 相关代码算是稳步增长。
+LaTeX 暂且把 LaTeX 勉强归为技术这块。其实一直都有想法好好学习下 LaTeX，但毕竟工作中基本没有用到，就算是写文档 Word 也可以说覆盖了 99% 的场景。今年以来由于要完成论文终于强迫自己好好学了下 LaTeX的语法，同时为了更好地掌握相关语法和排版一些手册和笔记也迫使自己使用 LaTeX 来完成。其实真的花点心思熟练下一些常用的 Package，LaTeX 还是很好掌握的而且制作出来的 PDF 排版相比使用 Word 生成的在视觉方面强出不少，当然 TikZ 另当别论。
+Gleam 如果说让我选一门编程语言作为下一门语言的话，我想那么一定是 Erlang，但不得不说其学习门槛过于陡峭。好在现在有了 Gleam，作为一门运行在 Erlang 虚拟机上的静态类型语言，它既有 Rust 的安全感，又有 Elixir 的高并发能力，同时语法也没有那么怪异。目前 Gleam 的问题是还比较小众，即便是相对 Elixir 来说也过于小众了，但好的方面是 Gleam 在 2024 年就发布了 1.0 版本并且有一个完善工具链（LSP 插件、包管理器、格式化工具）、有稳定的发布周期和积极活跃的社区。
+Java 本来不太想写 Java 这块的，但考虑到今年发布了 JDK 25 还是稍微说两句，现在 Java 迭代越来越快的同时带来的特性也越加丰富，同时也在积极现代化，吸收其他语言特性，这一方面蚕食 Scala 的，另一方面也给 Kotlin 带来挑战。最后说一句对于项目上已经切换到 JDK 21 的系统来说建议尽快切换到 JDK 25，其带来的 Scoped Values 和 结构化并发 解决了虚拟线程下 ThreadLocal 变量不可靠的问题，使得现代并发编程变得更安全高效且更易维护。</description><content>&lt;p>目前来看除夕夜写年终总结确实是一个不错的时间节点，一方面正好是完整的一个农历年，另一方面来说当是守岁。&lt;/p>
+&lt;h2 id="工作">工作&lt;/h2>
+&lt;p>今年工作上有一些调整，先是年中的时候参与到智能体的一个项目中接着又是产品线调整进入一个新的业务。目前国内智能体平台普通在易用性上都不太行，又由于是“新技术”（或者说新产品）在稳定性上面相对于主流开源平台还是有不小差距的，比较典型的两个问题，一个是在开发上线过程中模型被修改竟然无法定位到具体原因，另一个则是开发过程中经常发现之前调试或已上线功能不可用。对于国内这些智能体开发平台来说真正可用还需要一定时间。&lt;/p>
+&lt;p>另外就是对于新业务和新团队，一方面有很多业务知识需要补充，又是需要高频学习的阶段；另一方面是管理的混乱，只从技术角度去说的话一方面是系统没有经过良好的设计，只是一味实现需求，至于对既有业务系统影响以及后续扩展和可维护性上面存在比较大的欠缺。&lt;/p>
+&lt;h2 id="学习">学习&lt;/h2>
+&lt;p>今年最大的遗憾就是没有按期完成小论文，先是和导师沟通在国庆把初稿投出去，然后中间实验不是很顺利一直拖到了元旦，再然后是元旦期间又因为在论文内容和公式推导细节上进展缓慢。在终于把初稿投出去后就是和编辑那边相互卷了，审稿人无论是一轮还是二轮给的意见都很专业也不太好回复。网上看了相关讨论说是可以向编辑申请延期，但我始终觉着如果一件事情不能在今天完成那么明天也将完不成，所以宁愿在春节期间修改也没有向编辑申请延期。当然编辑在最后一个工作日也友善地发邮件过来询问是否有困难和已经开始修改稿件，在回邮件中礼貌地表达感谢并表示由于春节原因可能有一些影响但会赶在 &lt;code>DDL&lt;/code> 之前完成相关补充实验和论文修改。&lt;/p>
+&lt;p>关于学习这方面只能说但愿顺利吧。&lt;/p>
+&lt;h2 id="技术">技术&lt;/h2>
+&lt;h3 id="rust-rust-rust">Rust! Rust! Rust!&lt;/h3>
+&lt;p>如果说去年是学习&lt;code>Rust&lt;/code>的一年那么今年应该说是实践的一年。目前在工作之外的一些代码都尽可能地用&lt;code>Rust&lt;/code>来写了，同时针对工作上的一些代码也会思考如果用&lt;code>Rust&lt;/code>该如何实现，从代码量上来说 &lt;code>Rust&lt;/code> 相关代码算是稳步增长。&lt;/p>
+&lt;h3 id="latex">LaTeX&lt;/h3>
+&lt;p>暂且把 &lt;code>LaTeX&lt;/code> 勉强归为技术这块。其实一直都有想法好好学习下 &lt;code>LaTeX&lt;/code>，但毕竟工作中基本没有用到，就算是写文档 &lt;code>Word&lt;/code> 也可以说覆盖了 &lt;code>99%&lt;/code> 的场景。今年以来由于要完成论文终于强迫自己好好学了下 &lt;code>LaTeX&lt;/code>的语法，同时为了更好地掌握相关语法和排版一些手册和笔记也迫使自己使用 &lt;code>LaTeX&lt;/code> 来完成。其实真的花点心思熟练下一些常用的 &lt;code>Package&lt;/code>，&lt;code>LaTeX&lt;/code> 还是很好掌握的而且制作出来的 &lt;code>PDF&lt;/code> 排版相比使用 &lt;code>Word&lt;/code> 生成的在视觉方面强出不少，当然 &lt;code>TikZ&lt;/code> 另当别论。&lt;/p>
+&lt;h3 id="gleam">Gleam&lt;/h3>
+&lt;p>如果说让我选一门编程语言作为下一门语言的话，我想那么一定是 &lt;code>Erlang&lt;/code>，但不得不说其学习门槛过于陡峭。好在现在有了 &lt;code>Gleam&lt;/code>，作为一门运行在 Erlang 虚拟机上的静态类型语言，它既有 Rust 的安全感，又有 Elixir 的高并发能力，同时语法也没有那么怪异。目前 &lt;code>Gleam&lt;/code> 的问题是还比较小众，即便是相对 &lt;code>Elixir&lt;/code> 来说也过于小众了，但好的方面是 &lt;code>Gleam&lt;/code> 在 2024 年就发布了 1.0 版本并且有一个完善工具链（LSP 插件、包管理器、格式化工具）、有稳定的发布周期和积极活跃的社区。&lt;/p>
+&lt;h3 id="java">Java&lt;/h3>
+&lt;p>本来不太想写 &lt;code>Java&lt;/code> 这块的，但考虑到今年发布了 &lt;code>JDK 25&lt;/code> 还是稍微说两句，现在 &lt;code>Java&lt;/code> 迭代越来越快的同时带来的特性也越加丰富，同时也在积极现代化，吸收其他语言特性，这一方面蚕食 &lt;code>Scala&lt;/code> 的，另一方面也给 &lt;code>Kotlin&lt;/code> 带来挑战。最后说一句对于项目上已经切换到 &lt;code>JDK 21&lt;/code> 的系统来说建议尽快切换到 &lt;code>JDK 25&lt;/code>，其带来的 &lt;code>Scoped Values&lt;/code> 和 &lt;code>结构化并发&lt;/code> 解决了虚拟线程下 &lt;code>ThreadLocal&lt;/code> 变量不可靠的问题，使得现代并发编程变得更安全高效且更易维护。&lt;/p>
+&lt;h2 id="阅读">阅读&lt;/h2>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;a href="https://imgur.com/fINoCZR">&lt;strong>Engineering Leadership: The Hard Parts&lt;/strong>&lt;/a>&lt;/p>
+&lt;p>《&lt;strong>Engineering Leadership: The Hard Parts&lt;/strong>》这本是 26 年新出的书，去年也看过一本相同主题的 Manning 出版社的《Lead Developer Career Guide》，但那本书主要讲述的作为程序员如何从技术贡献者向领导角色转型。而本书则主要讲述的是如何在充满不确定性的混乱环境中建立高效的团队，分别从心理安全感**、&lt;strong>人员管理&lt;/strong>、**流程建设以及产品交付这四个方面，强调作为领导者怎样来化解组织内的冲突与内耗，同时介绍了在向非技术领导汇报时如何避免沟通陷阱和如何使用业务语言向非技术人员量化技术债的风险。虽然受限于环境以及具体问题，书中说介绍的一些内容可能无法完全落地，但是作为开阔技术领导者眼界以及防患未然，这本书建议所有技术管理者都应当读一读。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://imgur.com/XtjYIkA">Introduction to Probability&lt;/a>&lt;/p>
+&lt;p>&lt;a href="https://imgur.com/80KqTH1">Experimental Design for Data Science and Engineering&lt;/a>&lt;/p>
+&lt;p>《Introduction to Probability》和《Experimental Design for Data Science and Engineering》这两本书放一起来说主要是因为这两本都是数学或者说是统计相关的，另一方面是之前审稿人关于实验部分提出了比较多的建议所以今年又把《Introduction to Probability》这本书重新翻了翻，而《Experimental Design for Data Science and Engineering》这本书主要讲的是如何利用高效的统计方法降低实验成本、加速计算，并从数据中提取有价值的信息。这两本书不是作为工作用书但理论方面也还是建议所有从事工程方面人员有时间都能再给自己充充电，工作的方法或解决问题的办法有很多，但万变不离其宗的是理论。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;img src="https://imgur.com/n5NWP4J" alt="Just use Postgres!">&lt;/p>
+&lt;p>&lt;img src="https://imgur.com/x1biS7o" alt="PostgreSQL and How to Avoid Them">&lt;/p>
+&lt;p>《Just use Postgres!》和《PostgreSQL and How to Avoid Them》都是 Manning 在 PostgreSQL 方面的书所以放一起来说。《Just use Postgres!》主要介绍 PostgreSQL 的使用和功能特性，从基础的关系型存储和 SQL 查询，还介绍了 PG 数据库在 AI 向量搜索、地理空间数据及作为消息队列等方面的拓展用法。而《PostgreSQL and How to Avoid Them》则主要讲述的是开发中常见的技术误区，重点分析性能瓶颈、数据类型误用、索引失效以及高可用架构中的安全风险。针对采用 PostgreSQL 作为数据库的研发团队的开发者重点推荐第 2 本，作为资深开发人员或架构师第 1 本也推荐阅读。如果时间富余的话两本都可以看一看，对于深入理解数据库底层逻辑、规避因配置不当或架构设计失误导致的生产事故以及在复杂的技术选型中做出明智决策有很大帮助。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;a href="https://imgur.com/Lr8oUVX">深度学习精粹与 PyTorch 实践&lt;/a>&lt;/p>
+&lt;p>《深度学习精粹与 PyTorch 实践》这本书是今年阅读的为数不多的中文书籍。这本书包括从算法模型、卷积神经网络、循环神经网络到 Transformer 等架构的理论与实战，还介绍了如何构建模型、超参数调优等，旨在深入介绍深度学习内部的运作机制。可以说是从理论到实践方面一本很好的书，建议所有 AI 或是使用 PyTorch 进行模型训练的从业者都可以入手一本。从另一方面说这本书我也还没有读完，一是时间确实有限另一方面是这本书里包含了太多知识点，每次看个十几二十页就要去补相关知识点。&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;p>其他还有一些今年没有读完或是作为工具书来阅读的书目就不在此处介绍了。&lt;/p>
+&lt;h2 id="规划">规划&lt;/h2>
+&lt;p>今年的博客又是没有打理的一年，尤其是下半年几乎所有空闲时间都花在了补深度学习理论、&lt;code>PyTorch&lt;/code>基础、实验和论文上了，等过了这一阶段后面把博客再打理起来。毕竟有些东西在脑子里和真正把它写出来，个人对它的理解和掌握是不一样的。&lt;/p>
+&lt;h2 id="其他">其他&lt;/h2>
+&lt;p>To be continued。&lt;/p></content></item><item><title>2024年终总结</title><link>https://blog.liloew.in/posts/2024-in-review/</link><pubDate>Sat, 18 Jan 2025 23:36:31 +0800</pubDate><guid>https://blog.liloew.in/posts/2024-in-review/</guid><description>今天是 除夕, 决定花时间写一下 2024 年总结, 既是对过去一年工作的回顾，也是对自我的不断完善. 2023 年因各种因素没有做年终总结, 后续还是要严格敦促自己.
 工作 今年工作重心上有一些调整, 除了继续延续 23 年研发项目外更多地处理一些研发外围的工作, 既有 研发流程 又有 总结汇报 类的工作. 从研发角度考虑，流程应当尽可能服务于研发工作, 使研发更顺畅工作更顺利否则就会形成 枷锁 和 镣铐, 不仅徒有形式同时还加重一线人员负担. 另外就是对于 口号 和 方法论 颇有感触, 在具体实施过程中存在定位问题和解决问题四象限, 如果能做到定位问题的同时解决问题这个维度是最优的, 但往往迫于人员能力和时间要求一线同学只能靠蛮力硬推, 这样长期下来技术债越堆越高最终成为万年屎山. 而方法论则是大前提抑或是最为重要或最不重要 的一环, 对于路径明确的问题方法论已内化在各个环节之中, 对于没有很好的解决思路或是完全陌生的领域方法论就会显得尤为重要.
 回头来说从一线抽出部分精力后终于有时间做一些基础架构和全局整体相关的事情, 下半年原计划做两场以上技术分享，但因年底汇报和一些紧急需求最终搁浅; 另一个就是项目上需针对性地进行性能优化, 初期给了一些优化方案但实施起来研发同学优化的并不是很到位问题也较多, 最终以封装二方包的形式给了一套较为可靠的解决方案, 从而尽可能解放一线人员的心智负担, 提升代码质量.
 学习 今年在模式识别遇到了一些问题, 主要是平时工作太忙没课程顾得上期末这段时间也没有较大段的时间可以集中精力, 毫无疑问地挂科了. 不过万幸补考顺利通过也算收获了迄今为止唯一一次挂科, 不知是算学习生涯上的完整还是不完整.
