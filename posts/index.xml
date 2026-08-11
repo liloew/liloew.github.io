@@ -464,19 +464,7 @@
 &lt;p>回顾整个 &lt;code>HTTP&lt;/code> 客户端的演进历程，我们不仅完成了一套代码的重构，更经历了一场从指令式工程套路到纯函数式 &lt;code>Effect&lt;/code> 系统的思想跃迁。刚开始关注如何快速实现功能但容易因缺乏资源意识而留下严重的线上隐患，后续通过引入 &lt;code>OkHttp&lt;/code>、&lt;code>单例模式&lt;/code>、&lt;code>try-with-resources&lt;/code> 与结构化异常解决了高并发下的套接字泄露与连接复用问题，达到了生产可用的标准工程质量。接着引入 &lt;code>FP&lt;/code> 理念通过 &lt;code>Vavr&lt;/code> 引入 &lt;code>Either&lt;/code> 与 &lt;code>Try&lt;/code>，将错误转化为显式的值并利用 &lt;code>flatMap&lt;/code> 与 &lt;code>recoverWith&lt;/code> 等 &lt;code>Monad&lt;/code> 算子，优雅地消除了层层嵌套的 &lt;code>if-else&lt;/code> 与受检异常，让多步依赖与降级链路变成了流畅的声明式管道。 最后通过 &lt;code>Scala + Cats Effect&lt;/code> 的纯函数式架构跨越到了纯函数式的终极形态。利用高阶类型 &lt;code>F[_]&lt;/code> 与代数数据类型我们将 HTTP 请求抽象为纯净的计算蓝图（&lt;code>IO&lt;/code>）。&lt;/p>
 &lt;p>架构设计从来没有绝对的**银弹，**只有在特定语境下的权衡与选择。在实际业务中我们或许并不是每一个项目都有使用 &lt;code>Cats Effect&lt;/code> 或 &lt;code>ZIO&lt;/code> 等重型 &lt;code>FP&lt;/code> 工具的场景，乃至 &lt;code>Scala&lt;/code> 的使用也是极其罕见，但理解这四种范式的演进逻辑能让我们在面对复杂系统设计时拥有更高的视角——&lt;strong>学会如何控制副作用、如何设计严谨的类型契约，以及如何写出真正健壮、易于推导与组合的代码。&lt;/strong>&lt;/p>
 &lt;h2 id="补充">补充&lt;/h2>
-&lt;p>考虑到目前基于 &lt;code>Spring&lt;/code> 的微服务项目占据了绝大多数，相当多的团队都采用了基于声明式调用的 &lt;code>OpenFeign&lt;/code> 或 &lt;code>Retrofit&lt;/code> 作为服务间调用工具。这些框架虽然极大地简化了业务开发流程，但正因为其高度屏蔽了底层的网络细节与错误处理机制，容易让开发者对包括 &lt;code>TCP&lt;/code> 连接池、超时熔断以及错误码传递等在内的核心机制产生认知盲区。当遇到复杂链路故障或性能瓶颈时，缺乏对底层演进脉络理解的开发者往往无所适从。理解从最基础的 &lt;code>HttpClient&lt;/code> 到函数式 &lt;code>Effect&lt;/code> 系统的演进并不是要求在所有项目中都盲目推行 &lt;code>FP&lt;/code> 框架，而是为了让我们在面对黑盒工具时，能够保持对底层运行机制的掌控力，在架构选型与故障排查时看清事物的本质&lt;/p></content></item><item><title>无畏并发</title><link>https://blog.liloew.in/posts/fearless-concurrency.md/</link><pubDate>Sun, 02 Aug 2026 17:19:41 +0800</pubDate><guid>https://blog.liloew.in/posts/fearless-concurrency.md/</guid><description>最近在维护一套缺乏完善架构设计的老项目，可以说这个项目完全精准地走在了最佳实践的对立面。
-佶屈聱牙 TODO。
-各自为战 TODO。
-盲人摸象 。
-如何设计一个好的系统</description><content>&lt;p>最近在维护一套缺乏完善架构设计的老项目，可以说这个项目完全精准地走在了最佳实践的对立面。&lt;/p>
-&lt;h2 id="佶屈聱牙">佶屈聱牙&lt;/h2>
-&lt;p>TODO。&lt;/p>
-&lt;!-- raw HTML omitted -->
-&lt;h2 id="各自为战">各自为战&lt;/h2>
-&lt;p>TODO。&lt;/p>
-&lt;h2 id="盲人摸象">盲人摸象&lt;/h2>
-&lt;p>。&lt;/p>
-&lt;h2 id="如何设计一个好的系统">如何设计一个好的系统&lt;/h2></content></item><item><title>致谢</title><link>https://blog.liloew.in/posts/acknowledgements-for-masters-thesis/</link><pubDate>Mon, 25 May 2026 23:35:28 +0800</pubDate><guid>https://blog.liloew.in/posts/acknowledgements-for-masters-thesis/</guid><description>溯昔己丑之岁，余负笈南行，初入建康。彼弱冠之年，怀瓌意于胸中，搦翰藻于座右。朝览图志，夕探玄微，虽少灵犀顿悟之敏，亦长存守拙耕耘之志，遂获金马之赏，连取国奖之荣。
+&lt;p>考虑到目前基于 &lt;code>Spring&lt;/code> 的微服务项目占据了绝大多数，相当多的团队都采用了基于声明式调用的 &lt;code>OpenFeign&lt;/code> 或 &lt;code>Retrofit&lt;/code> 作为服务间调用工具。这些框架虽然极大地简化了业务开发流程，但正因为其高度屏蔽了底层的网络细节与错误处理机制，容易让开发者对包括 &lt;code>TCP&lt;/code> 连接池、超时熔断以及错误码传递等在内的核心机制产生认知盲区。当遇到复杂链路故障或性能瓶颈时，缺乏对底层演进脉络理解的开发者往往无所适从。理解从最基础的 &lt;code>HttpClient&lt;/code> 到函数式 &lt;code>Effect&lt;/code> 系统的演进并不是要求在所有项目中都盲目推行 &lt;code>FP&lt;/code> 框架，而是为了让我们在面对黑盒工具时，能够保持对底层运行机制的掌控力，在架构选型与故障排查时看清事物的本质&lt;/p></content></item><item><title>致谢</title><link>https://blog.liloew.in/posts/acknowledgements-for-masters-thesis/</link><pubDate>Mon, 25 May 2026 23:35:28 +0800</pubDate><guid>https://blog.liloew.in/posts/acknowledgements-for-masters-thesis/</guid><description>溯昔己丑之岁，余负笈南行，初入建康。彼弱冠之年，怀瓌意于胸中，搦翰藻于座右。朝览图志，夕探玄微，虽少灵犀顿悟之敏，亦长存守拙耕耘之志，遂获金马之赏，连取国奖之荣。
 及至身入职场，长居秦淮之滨，亦暂寓钱塘之畔。感领导之厚望，委余以重任，策余以精诚。职守之间，虽案牍劳形，然得托以枢要，益广见闻。市井虽繁，不乱求知之志；案牍虽冗，未损问道之心。余既承数理之严谨，复以敏求之心，续修法学之庄严，不囿一隅之见，兼采众长之华；如攀崇岳以尽收群峰，如涉深川以汇纳百流。
 余常自忖：学如逆水，不进则退；知如长河，无尽则竭。虽兼修文理，稍涉堂奥，然宇宙浩瀚，所得不过沧海一粟。处信息之变局，察科技之日新，是以余不甘平庸之志，欲穷微言之义。由是机缘汇聚，迨至癸卯之岁，复入黉宫，遂研求之志。历春秋三载，究天人之理，察图像之精，以求通达之境，不负晨昏之勤。
 然余之微功，半由内助。感吾妻贤淑，操持井臼，每余潜心简编，内子独理家政，备极辛勤。外事虽繁，赖贤内以克成；内顾无忧，遂远志而得骋。又念幼子及长，若朝露含曦，实吾志之所寄，力之所源。家室之和，如兰之馨，感佩五内，莫敢遑息。
