@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>System Design on 铜山西崩</title><link>https://blog.liloew.in/tags/system-design/</link><description>Recent content in System Design on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Sat, 12 Sep 2026 14:03:52 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/system-design/index.xml" rel="self" type="application/rss+xml"/><item><title>构建健壮系统</title><link>https://blog.liloew.in/posts/build-robust-system/</link><pubDate>Sat, 12 Sep 2026 14:03:52 +0800</pubDate><guid>https://blog.liloew.in/posts/build-robust-system/</guid><description>&lt;h2 id="背景">背景&lt;/h2>
+&lt;p>在现代软件工程中，我们构建的系统规模越来越庞大，架构也从简单的单体演变为复杂的分布式系统。然而许多系统并没有因为架构升级而变得更加健壮，反而陷入了维护成本变高、故障定位困难、代码质量恶化的泥潭。&lt;/p>
+&lt;p>要真正打造具有高健壮性与可扩展性的系统，我们需要仔细审视那些让系统变得不稳定或性能下降的根因，而不是急于用防御代码或更细的服务拆分临时性地解决（掩盖）问题，只有找到病因才能对症下药。以下几点是笔者工作中的一些总结和思考，力求抛砖引玉。&lt;/p>
+&lt;h2 id="锁是原罪">锁是原罪&lt;/h2>
+&lt;p>并发编程的核心难题在于共享状态的管理。为了解决多线程或多进程在并发场景下的资源竞争，绝大多数开发者第一反应就是加锁，但笔者的观点恰恰是：&lt;strong>锁，是复杂度的原罪。&lt;/strong>&lt;/p>
+&lt;p>以 Java 为例，在语言层面和 SDK 层面均提供了极其庞杂的锁机制：&lt;code>synchronized&lt;/code>、&lt;code>ReentrantLock&lt;/code>、&lt;code>ReentrantReadWriteLock&lt;/code>、&lt;code>StampedLock&lt;/code> 等等不同的锁实现，每种锁不仅用法迥异同时即便是同一种锁还可进一步区分公平和非公平模式、可重入性、乐观、悲观策略等概念。&lt;/p></description><content>&lt;h2 id="背景">背景&lt;/h2>
+&lt;p>在现代软件工程中，我们构建的系统规模越来越庞大，架构也从简单的单体演变为复杂的分布式系统。然而许多系统并没有因为架构升级而变得更加健壮，反而陷入了维护成本变高、故障定位困难、代码质量恶化的泥潭。&lt;/p>
+&lt;p>要真正打造具有高健壮性与可扩展性的系统，我们需要仔细审视那些让系统变得不稳定或性能下降的根因，而不是急于用防御代码或更细的服务拆分临时性地解决（掩盖）问题，只有找到病因才能对症下药。以下几点是笔者工作中的一些总结和思考，力求抛砖引玉。&lt;/p>
+&lt;h2 id="锁是原罪">锁是原罪&lt;/h2>
+&lt;p>并发编程的核心难题在于共享状态的管理。为了解决多线程或多进程在并发场景下的资源竞争，绝大多数开发者第一反应就是加锁，但笔者的观点恰恰是：&lt;strong>锁，是复杂度的原罪。&lt;/strong>&lt;/p>
+&lt;p>以 Java 为例，在语言层面和 SDK 层面均提供了极其庞杂的锁机制：&lt;code>synchronized&lt;/code>、&lt;code>ReentrantLock&lt;/code>、&lt;code>ReentrantReadWriteLock&lt;/code>、&lt;code>StampedLock&lt;/code> 等等不同的锁实现，每种锁不仅用法迥异同时即便是同一种锁还可进一步区分公平和非公平模式、可重入性、乐观、悲观策略等概念。&lt;/p>
+&lt;p>一方面并发往往伴随着竞争条件，而竞争又在一定程度上依赖特定的时间窗口，基于锁的代码在单元测试和功能测试中通常看不出其崩坏的一面，但在高并发的生产环境下却容易间歇性出现死锁问题。另一方面随着业务逻辑演进锁的粒度控制很容易失控。粒度太粗影响并发性能，粒度太细又极易引发死锁。为了直观展现不同并发模型的差异，我们以下对比三种典型设计：&lt;/p>
+&lt;ol>
+&lt;li>首先是经典的 &lt;code>共享内存 + 锁&lt;/code> 模式&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-Java" data-lang="Java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">import&lt;/span> java.util.concurrent.locks.ReentrantLock&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">LockBasedCounter&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">long&lt;/span> count &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#ae81ff">0&lt;/span>&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">final&lt;/span> ReentrantLock lock &lt;span style="color:#f92672">=&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> ReentrantLock&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">void&lt;/span> &lt;span style="color:#a6e22e">increment&lt;/span>&lt;span style="color:#f92672">()&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lock&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">lock&lt;/span>&lt;span style="color:#f92672">();&lt;/span> &lt;span style="color:#75715e">// 显式获取锁
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">try&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> count&lt;span style="color:#f92672">++;&lt;/span> &lt;span style="color:#75715e">// 临界区逻辑
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#f92672">}&lt;/span> &lt;span style="color:#66d9ef">finally&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lock&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">unlock&lt;/span>&lt;span style="color:#f92672">();&lt;/span> &lt;span style="color:#75715e">// 必须在 finally 中显式释放，避免死锁
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">long&lt;/span> &lt;span style="color:#a6e22e">getCount&lt;/span>&lt;span style="color:#f92672">()&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lock&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">lock&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">try&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> count&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span> &lt;span style="color:#66d9ef">finally&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> lock&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">unlock&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>在共享内存模式下下必须严格保证加解锁逻辑：当涉及到多个锁的复合业务时，一旦加锁顺序稍有不慎就会导致死锁。此外，高竞争下的线程挂起和调度开销同样极其昂贵。&lt;/p>
+&lt;ol start="2">
+&lt;li>
+&lt;p>其次是 &lt;code>通过通信共享内存&lt;/code> 模式&lt;/p>
+&lt;pre tabindex="0">&lt;code>package main
+import (
+&amp;#34;fmt&amp;#34;
+&amp;#34;sync&amp;#34;
+)
+type CounterOp int
+const (
+Increment CounterOp = iota
+Get
+)
+type Request struct {
+op CounterOp
+resp chan int64
+}
+// 独占状态的 Goroutine
+func startCounterServer(requests &amp;lt;-chan Request) {
+var count int64 = 0 // 状态完全封闭在内部，没有任何其他协程能直接修改
+for req := range requests {
+switch req.op {
+case Increment:
+count++
+case Get:
+req.resp &amp;lt;- count
+}
+}
+}
+func main() {
+requests := make(chan Request)
+go startCounterServer(requests)
+var wg sync.WaitGroup
+for i := 0; i &amp;lt; 1000; i++ {
+wg.Add(1)
+go func() {
+defer wg.Done()
+requests &amp;lt;- Request{op: Increment} // 通过发送消息驱动状态变更
+}()
+}
+wg.Wait()
+respChan := make(chan int64)
+requests &amp;lt;- Request{op: Get, resp: respChan}
+fmt.Printf(&amp;#34;Final Count: %d\n&amp;#34;, &amp;lt;-respChan)
+}
+&lt;/code>&lt;/pre>&lt;p>这里以 Go 语言为例，&lt;code>Go&lt;/code> 贯彻了&lt;a href="https://en.wikipedia.org/wiki/Communicating_sequential_processes">CSP&lt;/a>哲学。状态被严格隔离在单个 Goroutine 内部，外部只能通过通道发送指令，这样的代码没有锁竞态，也没有死锁顾虑。将并发编程转换成了顺序的消息流处理，代码的可测试性和维护性呈数量级提升。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>最后是无锁 &lt;code>CAS&lt;/code> 指令&lt;/p>
+&lt;p>对于基础数据结构的变更，利用 CPU 层面的 &lt;strong>CAS（Compare-And-Swap）&lt;/strong> 原语避免阻塞。&lt;/p>
+&lt;pre tabindex="0">&lt;code>import java.util.concurrent.atomic.AtomicLong;
+public class LockFreeCounter {
+// 底层基于硬件级 CAS 原语，无需显式锁
+private final AtomicLong count = new AtomicLong(0);
+public void increment() {
+count.incrementAndGet(); // 自旋 + CAS
+}
+public long getCount() {
+return count.get();
+}
+}
+&lt;/code>&lt;/pre>&lt;p>对于无锁 &lt;code>CAS&lt;/code> 模式下如果竞争失败并不会阻塞而是进行 &lt;code>CPU&lt;/code> 自旋直至完成。&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;p>解决并发问题的最好方式，是&lt;strong>消除共享状态&lt;/strong>或&lt;strong>避免直接锁竞争&lt;/strong>。在大规模并发系统中优先考虑采用消息传递进行状态隔离或无锁结构才是从根本上降低系统复杂度与提升健壮性的关键所在。&lt;/p>
+&lt;h2 id="任其崩溃">任其崩溃&lt;/h2>
+&lt;p>很多开发人员和架构师有一种&lt;strong>防御性思维&lt;/strong>执念：试图捕获所有异常、处理好所有漏洞，将程序实现得天衣无缝。然而在复杂系统中，&lt;strong>追求不崩溃是不切实际的&lt;/strong>。&lt;/p>
+&lt;p>过度防御往往会导致代码中充斥着无意义的 &lt;code>try-catch&lt;/code>，甚至将致命异常静默吞掉。这种延后处理手段会让程序带伤运行，产生数据不一致或更隐蔽的连锁反应最终引发业务或系统失败。&lt;/p>
+&lt;p>在 &lt;code>Erlang&lt;/code> 社区很早就提出了著名的 &lt;strong>Let It Crash&lt;/strong> 哲学，好的系统设计应当具备以下能力：&lt;strong>故障隔离&lt;/strong>，确保单个组件、线程或请求的崩溃不会影响到整个进程或其它独立服务；&lt;strong>自愈与重启机制&lt;/strong>，建立监督树或依靠容器化编排，当某个单元陷入不可逆的异常状态时，直接让其快速崩溃，并由上层监督者快速拉起一个新的干净实例。能够自我修复的系统，远比企图处理所有异常边界的系统更具弹性。&lt;/p>
+&lt;h2 id="重视分布式追踪">重视分布式追踪&lt;/h2>
+&lt;p>微服务架构大行其道的今天几乎很少能见到巨型单体应用，然而许多架构师在做系统设计时依然将绝大部分精力放在&lt;strong>如何切蛋糕&lt;/strong>上——即习惯性地思考按业务域切分、按高低频调用切分、按读写频次切分业务域来构建整个系统，却往往忽略了更致命的问题：&lt;strong>服务切得越碎，系统越像一个黑盒。&lt;/strong> 一个请求从网关进来，经过鉴权、订单、支付、库存、通知，跨越五六个服务、十几个进程、若干次数据库和缓存调用。当这个请求变慢或者失败时，&lt;strong>没有链路追踪的团队&lt;/strong>经常需要各个服务负责人拉群相互排查日志，甚至会出现因日志格式不统一、时钟不同步而互相推诿，定位问题耗时以小时或天计。因此在分布式架构中，&lt;strong>分布式追踪不是可选的功能增强，而是不可或缺的基础设施&lt;/strong>。但而分布式追踪的核心痛点在于如何保证 &lt;code>Trace ID&lt;/code> 和 &lt;code>Span ID&lt;/code> 等上下文信息在跨进程、跨网络调用时完好无损地延续。&lt;/p>
+&lt;p>虽然目前绝大多数框架支持通过&lt;code>Agent&lt;/code>自动插桩，但在必要时仍然可以通过代码显式注入，以下代码则简要展示了在使用 &lt;code>OpenTelemetry&lt;/code> 时如何在业务层面手动创建不同 &lt;code>Span&lt;/code> 域：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">@Service&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">OrderService&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 自动为方法创建名为 &amp;#34;order.process&amp;#34; 的 Span
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#75715e">// 参数值自动作为 Span 属性，如 order.id、customer.id
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#a6e22e">@WithSpan&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;order.process&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">public&lt;/span> Order &lt;span style="color:#a6e22e">processOrder&lt;/span>&lt;span style="color:#f92672">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@SpanAttribute&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;order.id&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span> String orderId&lt;span style="color:#f92672">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#a6e22e">@SpanAttribute&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;customer.id&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span> String customerId&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 业务逻辑
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">return&lt;/span> repository&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">findAndProcess&lt;/span>&lt;span style="color:#f92672">(&lt;/span>orderId&lt;span style="color:#f92672">,&lt;/span> customerId&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-java" data-lang="java">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#a6e22e">@Service&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#66d9ef">class&lt;/span> &lt;span style="color:#a6e22e">PaymentService&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">private&lt;/span> &lt;span style="color:#66d9ef">final&lt;/span> Tracer tracer&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 注入 OpenTelemetry Bean，获取 Tracer
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">public&lt;/span> &lt;span style="color:#a6e22e">PaymentService&lt;/span>&lt;span style="color:#f92672">(&lt;/span>OpenTelemetry openTelemetry&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">this&lt;/span>&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">tracer&lt;/span> &lt;span style="color:#f92672">=&lt;/span> openTelemetry&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">getTracer&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;payment-service&amp;#34;&lt;/span>&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">public&lt;/span> Payment &lt;span style="color:#a6e22e">processPayment&lt;/span>&lt;span style="color:#f92672">(&lt;/span>String orderId&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#66d9ef">double&lt;/span> amount&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 创建 Span
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> Span span &lt;span style="color:#f92672">=&lt;/span> tracer&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">spanBuilder&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;process-payment&amp;#34;&lt;/span>&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">setAttribute&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;order.id&amp;#34;&lt;/span>&lt;span style="color:#f92672">,&lt;/span> orderId&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">setAttribute&lt;/span>&lt;span style="color:#f92672">(&lt;/span>&lt;span style="color:#e6db74">&amp;#34;payment.amount&amp;#34;&lt;/span>&lt;span style="color:#f92672">,&lt;/span> amount&lt;span style="color:#f92672">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">startSpan&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 将 Span 设为当前上下文，使其子 Span 正确继承关系
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">try&lt;/span> &lt;span style="color:#f92672">(&lt;/span>Scope scope &lt;span style="color:#f92672">=&lt;/span> span&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">makeCurrent&lt;/span>&lt;span style="color:#f92672">())&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> Payment payment &lt;span style="color:#f92672">=&lt;/span> doPayment&lt;span style="color:#f92672">(&lt;/span>orderId&lt;span style="color:#f92672">,&lt;/span> amount&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> span&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">setStatus&lt;/span>&lt;span style="color:#f92672">(&lt;/span>StatusCode&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">OK&lt;/span>&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> payment&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span> &lt;span style="color:#66d9ef">catch&lt;/span> &lt;span style="color:#f92672">(&lt;/span>Exception e&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> span&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">setStatus&lt;/span>&lt;span style="color:#f92672">(&lt;/span>StatusCode&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">ERROR&lt;/span>&lt;span style="color:#f92672">,&lt;/span> e&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">getMessage&lt;/span>&lt;span style="color:#f92672">());&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> span&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">recordException&lt;/span>&lt;span style="color:#f92672">(&lt;/span>e&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">throw&lt;/span> e&lt;span style="color:#f92672">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span> &lt;span style="color:#66d9ef">finally&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 务必结束 Span，否则数据不会上报
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> span&lt;span style="color:#f92672">.&lt;/span>&lt;span style="color:#a6e22e">end&lt;/span>&lt;span style="color:#f92672">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">private&lt;/span> Payment &lt;span style="color:#a6e22e">doPayment&lt;/span>&lt;span style="color:#f92672">(&lt;/span>String orderId&lt;span style="color:#f92672">,&lt;/span> &lt;span style="color:#66d9ef">double&lt;/span> amount&lt;span style="color:#f92672">)&lt;/span> &lt;span style="color:#f92672">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e">// 实际支付逻辑
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span> &lt;span style="color:#66d9ef">return&lt;/span> &lt;span style="color:#66d9ef">new&lt;/span> Payment&lt;span style="color:#f92672">(&lt;/span>orderId&lt;span style="color:#f92672">,&lt;/span> amount&lt;span style="color:#f92672">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>在实际场景中我们经常使用线程池和消息队列等技术，而 &lt;code>OpenTelemetry&lt;/code> 已经充分考虑到了这一点，无论是对&lt;code>kafka&lt;/code>, &lt;code>RabbitMQ&lt;/code>或是&lt;code>MQTTv5&lt;/code>都天然地支持。&lt;/p>
+&lt;h2 id="四-提高技术门槛">四、 提高技术门槛&lt;/h2>
+&lt;p>这一点可能和很多人的直觉相悖，我见过太多技术团队热衷于&lt;strong>技术下放&lt;/strong>和&lt;strong>组件封装&lt;/strong>——把复杂的东西包一层让更多人可以参与开发。把门槛降低，让新人也能快速上手。初衷是好的实则为项目埋下了深重的技术债务。开发者可能不知道 &lt;code>synchronized&lt;/code> 和 &lt;code>ReentrantLock&lt;/code> 的区别，于是到处乱用锁、不知道 HTTP 连接池的工作机制，于是随手配置参数导致线上连接耗尽。&lt;/p>
+&lt;p>一个不了解数据库 &lt;code>MVCC&lt;/code> 机制、索引 &lt;code>B+&lt;/code> 树数据结构的开发者仅仅依靠封装好的&lt;code>ORM&lt;/code>框架，极易写出引发全表扫描或死锁的&lt;code>SQL&lt;/code>语句。同样一个不了解&lt;code>CPU&lt;/code>调度与线程池原理的开发者技术在工具加持下仍然会写出阻塞性代码，这也是我们在实际项目中遇到的为什么即便使用了&lt;strong>虚拟线程&lt;/strong>但系统响应并没有提升甚至有可能下降了。&lt;/p>
+&lt;p>妄图以低维的技术手段解决高维问题，是项目里不可维护代码的最大来源。封装本身不是错，错的是把封装当作不需要理解原理的借口。组件封装的目的更多地在于减少重复劳动，而不是掩盖无知。唯有理解底层细节才能在架构选型、性能调优和疑难问题排查中做出正确的决策。妄图用低维的技术认知去解决高维的系统工程问题，最终只会导致项目中充斥着不可维护的代码和烂尾设计。&lt;/p>
+&lt;h2 id="最后">最后&lt;/h2>
+&lt;p>系统的健壮性从来不是凭空产生的，它源于对复杂度的敬畏与架构审视的理性。真正健壮的系统不是把复杂性藏起来，而是正视复杂性、隔离复杂性、并让理解复杂性的人来掌控它。锁不可怕，崩溃不可怕，并发亦不可怕——可怕的是我们假装它们不复杂。&lt;/p></content></item></channel></rss>
