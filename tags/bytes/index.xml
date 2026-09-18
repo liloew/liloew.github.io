@@ -1,26 +1,26 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>bytes on 铜山西崩</title><link>https://blog.liloew.in/tags/bytes/</link><description>Recent content in bytes on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Fri, 03 Nov 2023 21:03:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/bytes/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
-&lt;h2 id="环境准备">环境准备&lt;/h2>
-&lt;p>首先需要安装 &lt;code>Rust&lt;/code>, 目前 &lt;code>Rust&lt;/code> 官方主要提供 &lt;code>Rustup&lt;/code> 这一工具管理 &lt;code>Rust&lt;/code> 各版本. 如果是 &lt;code>Windows&lt;/code> 可直接下载 &lt;code>Rustup-init.exe&lt;/code> 运行即可, 如果是 &lt;code>Linux&lt;/code> 或 &lt;code>macOS&lt;/code> 则可在 &lt;code>Shell&lt;/code> 中运行一下命令快速安装:&lt;/p>
-&lt;pre tabindex="0">&lt;code>curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
-&lt;/code>&lt;/pre>&lt;p>&lt;code>Rustup&lt;/code> 在安装 &lt;code>Rust&lt;/code> 同时也会同时安装 &lt;code>Cargo&lt;/code> 这一构建和包管理工具, 相对于 &lt;code>C/C++&lt;/code> 而言极大地减轻依赖和构建管理的心智负担.&lt;/p>
-&lt;p>在安装完 &lt;code>Rust&lt;/code> 和 &lt;code>Cargo&lt;/code> 后由于涉及到网络报文, 因此还建议安装 &lt;code>Wireshark&lt;/code>(&lt;code>Linux&lt;/code> 环境下使用 &lt;code>tcpdump&lt;/code> 亦可)以便后续对报文进行分析.&lt;/p>
-&lt;p>&lt;code>IDE&lt;/code> 可以选择 &lt;code>VS Code&lt;/code> 或 &lt;code>JetBrains&lt;/code> 新发布的 &lt;code>RustRover&lt;/code>, 如果选择 &lt;code>VS Code&lt;/code> 的话为了进行调试还需同时安装 &lt;code>CodeLLDB&lt;/code> 插件.&lt;/p></description><content>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
-&lt;h2 id="环境准备">环境准备&lt;/h2>
-&lt;p>首先需要安装 &lt;code>Rust&lt;/code>, 目前 &lt;code>Rust&lt;/code> 官方主要提供 &lt;code>Rustup&lt;/code> 这一工具管理 &lt;code>Rust&lt;/code> 各版本. 如果是 &lt;code>Windows&lt;/code> 可直接下载 &lt;code>Rustup-init.exe&lt;/code> 运行即可, 如果是 &lt;code>Linux&lt;/code> 或 &lt;code>macOS&lt;/code> 则可在 &lt;code>Shell&lt;/code> 中运行一下命令快速安装:&lt;/p>
-&lt;pre tabindex="0">&lt;code>curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
-&lt;/code>&lt;/pre>&lt;p>&lt;code>Rustup&lt;/code> 在安装 &lt;code>Rust&lt;/code> 同时也会同时安装 &lt;code>Cargo&lt;/code> 这一构建和包管理工具, 相对于 &lt;code>C/C++&lt;/code> 而言极大地减轻依赖和构建管理的心智负担.&lt;/p>
-&lt;p>在安装完 &lt;code>Rust&lt;/code> 和 &lt;code>Cargo&lt;/code> 后由于涉及到网络报文, 因此还建议安装 &lt;code>Wireshark&lt;/code>(&lt;code>Linux&lt;/code> 环境下使用 &lt;code>tcpdump&lt;/code> 亦可)以便后续对报文进行分析.&lt;/p>
-&lt;p>&lt;code>IDE&lt;/code> 可以选择 &lt;code>VS Code&lt;/code> 或 &lt;code>JetBrains&lt;/code> 新发布的 &lt;code>RustRover&lt;/code>, 如果选择 &lt;code>VS Code&lt;/code> 的话为了进行调试还需同时安装 &lt;code>CodeLLDB&lt;/code> 插件.&lt;/p>
-&lt;h2 id="开发">开发&lt;/h2>
-&lt;p>我们首先通过 &lt;code>cargo new inode-rs&lt;/code> 新建一个项目, 其中 &lt;code>inode-rs&lt;/code> 是项目名称. 为便于项目管理 &lt;code>Cargo&lt;/code> 为我们提供了 &lt;code>workspace&lt;/code> 的概念, 此处我们在 &lt;code>inode-rs&lt;/code> 下新建 &lt;code>packet&lt;/code> 和 &lt;code>cli&lt;/code> 两个子项目. 此时项目结构看起来像这样:&lt;/p>
-&lt;pre tabindex="0">&lt;code>.
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bytes on 铜山西崩</title><link>https://blog.liloew.in/tags/bytes/</link><description>Recent content in Bytes on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><language>cn</language><lastBuildDate>Fri, 03 Nov 2023 21:03:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/bytes/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;前一篇文章&lt;/a&gt;介绍了 &lt;code&gt;DHCP&lt;/code&gt; 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code&gt;Rust&lt;/code&gt; 从头实现一个 &lt;code&gt;DHCP&lt;/code&gt; 协议客户端.&lt;/p&gt;
+&lt;h2 id="环境准备"&gt;环境准备&lt;/h2&gt;
+&lt;p&gt;首先需要安装 &lt;code&gt;Rust&lt;/code&gt;, 目前 &lt;code&gt;Rust&lt;/code&gt; 官方主要提供 &lt;code&gt;Rustup&lt;/code&gt; 这一工具管理 &lt;code&gt;Rust&lt;/code&gt; 各版本. 如果是 &lt;code&gt;Windows&lt;/code&gt; 可直接下载 &lt;code&gt;Rustup-init.exe&lt;/code&gt; 运行即可, 如果是 &lt;code&gt;Linux&lt;/code&gt; 或 &lt;code&gt;macOS&lt;/code&gt; 则可在 &lt;code&gt;Shell&lt;/code&gt; 中运行一下命令快速安装:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;Rustup&lt;/code&gt; 在安装 &lt;code&gt;Rust&lt;/code&gt; 同时也会同时安装 &lt;code&gt;Cargo&lt;/code&gt; 这一构建和包管理工具, 相对于 &lt;code&gt;C/C++&lt;/code&gt; 而言极大地减轻依赖和构建管理的心智负担.&lt;/p&gt;
+&lt;p&gt;在安装完 &lt;code&gt;Rust&lt;/code&gt; 和 &lt;code&gt;Cargo&lt;/code&gt; 后由于涉及到网络报文, 因此还建议安装 &lt;code&gt;Wireshark&lt;/code&gt;(&lt;code&gt;Linux&lt;/code&gt; 环境下使用 &lt;code&gt;tcpdump&lt;/code&gt; 亦可)以便后续对报文进行分析.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;IDE&lt;/code&gt; 可以选择 &lt;code&gt;VS Code&lt;/code&gt; 或 &lt;code&gt;JetBrains&lt;/code&gt; 新发布的 &lt;code&gt;RustRover&lt;/code&gt;, 如果选择 &lt;code&gt;VS Code&lt;/code&gt; 的话为了进行调试还需同时安装 &lt;code&gt;CodeLLDB&lt;/code&gt; 插件.&lt;/p&gt;</description><content>&lt;p&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;前一篇文章&lt;/a&gt;介绍了 &lt;code&gt;DHCP&lt;/code&gt; 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code&gt;Rust&lt;/code&gt; 从头实现一个 &lt;code&gt;DHCP&lt;/code&gt; 协议客户端.&lt;/p&gt;
+&lt;h2 id="环境准备"&gt;环境准备&lt;/h2&gt;
+&lt;p&gt;首先需要安装 &lt;code&gt;Rust&lt;/code&gt;, 目前 &lt;code&gt;Rust&lt;/code&gt; 官方主要提供 &lt;code&gt;Rustup&lt;/code&gt; 这一工具管理 &lt;code&gt;Rust&lt;/code&gt; 各版本. 如果是 &lt;code&gt;Windows&lt;/code&gt; 可直接下载 &lt;code&gt;Rustup-init.exe&lt;/code&gt; 运行即可, 如果是 &lt;code&gt;Linux&lt;/code&gt; 或 &lt;code&gt;macOS&lt;/code&gt; 则可在 &lt;code&gt;Shell&lt;/code&gt; 中运行一下命令快速安装:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;Rustup&lt;/code&gt; 在安装 &lt;code&gt;Rust&lt;/code&gt; 同时也会同时安装 &lt;code&gt;Cargo&lt;/code&gt; 这一构建和包管理工具, 相对于 &lt;code&gt;C/C++&lt;/code&gt; 而言极大地减轻依赖和构建管理的心智负担.&lt;/p&gt;
+&lt;p&gt;在安装完 &lt;code&gt;Rust&lt;/code&gt; 和 &lt;code&gt;Cargo&lt;/code&gt; 后由于涉及到网络报文, 因此还建议安装 &lt;code&gt;Wireshark&lt;/code&gt;(&lt;code&gt;Linux&lt;/code&gt; 环境下使用 &lt;code&gt;tcpdump&lt;/code&gt; 亦可)以便后续对报文进行分析.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;IDE&lt;/code&gt; 可以选择 &lt;code&gt;VS Code&lt;/code&gt; 或 &lt;code&gt;JetBrains&lt;/code&gt; 新发布的 &lt;code&gt;RustRover&lt;/code&gt;, 如果选择 &lt;code&gt;VS Code&lt;/code&gt; 的话为了进行调试还需同时安装 &lt;code&gt;CodeLLDB&lt;/code&gt; 插件.&lt;/p&gt;
+&lt;h2 id="开发"&gt;开发&lt;/h2&gt;
+&lt;p&gt;我们首先通过 &lt;code&gt;cargo new inode-rs&lt;/code&gt; 新建一个项目, 其中 &lt;code&gt;inode-rs&lt;/code&gt; 是项目名称. 为便于项目管理 &lt;code&gt;Cargo&lt;/code&gt; 为我们提供了 &lt;code&gt;workspace&lt;/code&gt; 的概念, 此处我们在 &lt;code&gt;inode-rs&lt;/code&gt; 下新建 &lt;code&gt;packet&lt;/code&gt; 和 &lt;code&gt;cli&lt;/code&gt; 两个子项目. 此时项目结构看起来像这样:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;.
 ├── Cargo.toml
 ├── cli
 └── packet
-&lt;/code>&lt;/pre>&lt;p>为了后续开发我们还需要至少添加 &lt;code>bytes&lt;/code>, &lt;code>pnet&lt;/code> 和 &lt;code>tokio&lt;/code> 依赖. 其中 &lt;code>bytes&lt;/code> 主要用于二进制报文的读写, &lt;code>pnet&lt;/code> 可用于获取本机网卡信息, &lt;code>tokio&lt;/code> 是一个异步运行时库, 我们使用其提供的 &lt;code>async/await&lt;/code> 运行环境简化异步和多线程操作.&lt;/p>
-&lt;p>我们在 &lt;code>packet&lt;/code> 子项目下依次定义子 &lt;code>mod&lt;/code> 为 &lt;code>udp&lt;/code> 并在 &lt;code>udp&lt;/code> 模块下定义 &lt;code>dhcp&lt;/code> 模块, 最终文件结构为 &lt;code>packet/udp/dhcp.rs&lt;/code>. 在 &lt;code>dhcp.rs&lt;/code> 内定义具体的数据结构.&lt;/p>
-&lt;p>依据 &lt;code>RFC 2132&lt;/code> 中关于 &lt;code>options&lt;/code> 章节我们首先定义一个 &lt;code>DHCP Message Type&lt;/code> 消息类型的枚举:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone, Copy)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;为了后续开发我们还需要至少添加 &lt;code&gt;bytes&lt;/code&gt;, &lt;code&gt;pnet&lt;/code&gt; 和 &lt;code&gt;tokio&lt;/code&gt; 依赖. 其中 &lt;code&gt;bytes&lt;/code&gt; 主要用于二进制报文的读写, &lt;code&gt;pnet&lt;/code&gt; 可用于获取本机网卡信息, &lt;code&gt;tokio&lt;/code&gt; 是一个异步运行时库, 我们使用其提供的 &lt;code&gt;async/await&lt;/code&gt; 运行环境简化异步和多线程操作.&lt;/p&gt;
+&lt;p&gt;我们在 &lt;code&gt;packet&lt;/code&gt; 子项目下依次定义子 &lt;code&gt;mod&lt;/code&gt; 为 &lt;code&gt;udp&lt;/code&gt; 并在 &lt;code&gt;udp&lt;/code&gt; 模块下定义 &lt;code&gt;dhcp&lt;/code&gt; 模块, 最终文件结构为 &lt;code&gt;packet/udp/dhcp.rs&lt;/code&gt;. 在 &lt;code&gt;dhcp.rs&lt;/code&gt; 内定义具体的数据结构.&lt;/p&gt;
+&lt;p&gt;依据 &lt;code&gt;RFC 2132&lt;/code&gt; 中关于 &lt;code&gt;options&lt;/code&gt; 章节我们首先定义一个 &lt;code&gt;DHCP Message Type&lt;/code&gt; 消息类型的枚举:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone, Copy)]
 pub enum DHCPMessageType {
 DHCPDISCOVER = 0x01,
 DHCPOFFER = 0x02,
@@ -31,15 +31,15 @@ DHCPNAK = 0x06,
 DHCPRELEASE = 0x07,
 DHCPINFORM = 0x08,
 }
-&lt;/code>&lt;/pre>&lt;p>同样, 依据 &lt;code>RFC 2131&lt;/code> 中关于报文格式章节我们首先定义 &lt;code>op&lt;/code> 枚举:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone, Copy, Default)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;同样, 依据 &lt;code&gt;RFC 2131&lt;/code&gt; 中关于报文格式章节我们首先定义 &lt;code&gt;op&lt;/code&gt; 枚举:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone, Copy, Default)]
 pub enum DHCPOP {
 #[default]
 BOOTREQUEST = 0x01,
 BOOTREPLY = 0x02,
 }
-&lt;/code>&lt;/pre>&lt;p>此处 &lt;code>DHCPOP&lt;/code> 枚举由于在网络传输过程中需要序列化为 &lt;code>u8&lt;/code>, 在客户端接收到报文后再将对应的 &lt;code>u8&lt;/code> 数值反序列化为 &lt;code>DHCPOP&lt;/code> 枚举, 因此我们需要实现 &lt;code>Into&lt;/code> 和 &lt;code>From&lt;/code> 两个 &lt;code>Trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl Into&amp;lt;DHCPOP&amp;gt; for u8 {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;此处 &lt;code&gt;DHCPOP&lt;/code&gt; 枚举由于在网络传输过程中需要序列化为 &lt;code&gt;u8&lt;/code&gt;, 在客户端接收到报文后再将对应的 &lt;code&gt;u8&lt;/code&gt; 数值反序列化为 &lt;code&gt;DHCPOP&lt;/code&gt; 枚举, 因此我们需要实现 &lt;code&gt;Into&lt;/code&gt; 和 &lt;code&gt;From&lt;/code&gt; 两个 &lt;code&gt;Trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl Into&amp;lt;DHCPOP&amp;gt; for u8 {
 fn into(self) -&amp;gt; DHCPOP {
 match self {
 0x01 =&amp;gt; DHCPOP::BOOTREQUEST,
@@ -53,10 +53,10 @@ fn from(value: DHCPOP) -&amp;gt; Self {
 value as u8
 }
 }
-&lt;/code>&lt;/pre>&lt;p>在实现 &lt;code>Into&lt;/code> &lt;code>Trait&lt;/code> 时我们使用了 &lt;code>match&lt;/code> &lt;code>模式匹配&lt;/code>. 当前 &lt;code>Rust&lt;/code> 要求针对 &lt;code>match&lt;/code> 模式匹配必须是 &lt;code>穷举&lt;/code> 的 - 即必须保护所有可能情况, 因此在对 &lt;code>u8&lt;/code> 进行匹配时由于我们只关注 &lt;code>0x01&lt;/code> 和 &lt;code>0x02&lt;/code> 两种场景, 针对其他情况统一使用 &lt;code>_&lt;/code> 进行匹配并返回一个默认的 &lt;code>DHCPOP::BOOTREQUEST&lt;/code>.&lt;/p>
-&lt;p>&lt;em>其他一些类似的枚举我们不在反复展示.&lt;/em>&lt;/p>
-&lt;p>在定义了必要的一些 &lt;code>enum&lt;/code> 后我们再定义一个 &lt;code>DHCPDiscover&lt;/code> 结构体:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在实现 &lt;code&gt;Into&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 时我们使用了 &lt;code&gt;match&lt;/code&gt; &lt;code&gt;模式匹配&lt;/code&gt;. 当前 &lt;code&gt;Rust&lt;/code&gt; 要求针对 &lt;code&gt;match&lt;/code&gt; 模式匹配必须是 &lt;code&gt;穷举&lt;/code&gt; 的 - 即必须保护所有可能情况, 因此在对 &lt;code&gt;u8&lt;/code&gt; 进行匹配时由于我们只关注 &lt;code&gt;0x01&lt;/code&gt; 和 &lt;code&gt;0x02&lt;/code&gt; 两种场景, 针对其他情况统一使用 &lt;code&gt;_&lt;/code&gt; 进行匹配并返回一个默认的 &lt;code&gt;DHCPOP::BOOTREQUEST&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;其他一些类似的枚举我们不在反复展示.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;在定义了必要的一些 &lt;code&gt;enum&lt;/code&gt; 后我们再定义一个 &lt;code&gt;DHCPDiscover&lt;/code&gt; 结构体:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone)]
 pub struct DHCPDiscover {
 pub op: DHCPOP,
 pub htype: DHCPHType,
@@ -74,8 +74,8 @@ pub sname: [u8; 64],
 pub file: [u8; 128],
 pub options: Vec&amp;lt;u8&amp;gt;,
 }
-&lt;/code>&lt;/pre>&lt;p>同时为 &lt;code>DHCPDiscover&lt;/code> 实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl Default for DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;同时为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl Default for DHCPDiscover {
 fn default() -&amp;gt; Self {
 DHCPDiscover {
 op: DHCPOP::BOOTREQUEST,
@@ -96,9 +96,9 @@ options: vec![99, 130, 83, 99],
 }
 }
 }
-&lt;/code>&lt;/pre>&lt;p>在为 &lt;code>DHCPDiscover&lt;/code> 实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code> 时我们为字段 &lt;code>options&lt;/code> 预先存入了 &lt;code>magic cookie&lt;/code> 即 &lt;code>[99, 130, 83, 99]&lt;/code>(&lt;code>10&lt;/code> 进制表示).&lt;/p>
-&lt;p>除了实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code> 我们同时还定义一个 &lt;code>fn with_mac(mac: &amp;amp;str)&lt;/code> 的关联函数, 其作用是根据 &lt;code>MAC&lt;/code> 地址初始化 &lt;code>DHCPDiscover&lt;/code> 对象; 同时为了支持动态设置 &lt;code>options&lt;/code> 字段, 我们为 &lt;code>DHCPDiscover&lt;/code> 添加一个 &lt;code>fn insert_options(&amp;amp;mut self, options: Vec&amp;lt;DHCPOPTIONS&amp;gt;)&lt;/code> 方法, 该方法关联到 &lt;code>DHCPDiscover&lt;/code> 的实例并可变(&lt;code>mut&lt;/code>)借用其实例自身以更新相关属性:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 时我们为字段 &lt;code&gt;options&lt;/code&gt; 预先存入了 &lt;code&gt;magic cookie&lt;/code&gt; 即 &lt;code&gt;[99, 130, 83, 99]&lt;/code&gt;(&lt;code&gt;10&lt;/code&gt; 进制表示).&lt;/p&gt;
+&lt;p&gt;除了实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 我们同时还定义一个 &lt;code&gt;fn with_mac(mac: &amp;amp;str)&lt;/code&gt; 的关联函数, 其作用是根据 &lt;code&gt;MAC&lt;/code&gt; 地址初始化 &lt;code&gt;DHCPDiscover&lt;/code&gt; 对象; 同时为了支持动态设置 &lt;code&gt;options&lt;/code&gt; 字段, 我们为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 添加一个 &lt;code&gt;fn insert_options(&amp;amp;mut self, options: Vec&amp;lt;DHCPOPTIONS&amp;gt;)&lt;/code&gt; 方法, 该方法关联到 &lt;code&gt;DHCPDiscover&lt;/code&gt; 的实例并可变(&lt;code&gt;mut&lt;/code&gt;)借用其实例自身以更新相关属性:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl DHCPDiscover {
 pub fn with_mac(mac: &amp;amp;str) -&amp;gt; Self {
 let mut mac_addr: Vec&amp;lt;u8&amp;gt; = if mac.contains(&amp;#34;-&amp;#34;) {
 str::split(mac, &amp;#34;-&amp;#34;)
@@ -123,12 +123,12 @@ self.options.extend(ele.va.clone());
 self.options.push(0xff);
 }
 }
-&lt;/code>&lt;/pre>&lt;p>以上除了定义 &lt;code>enum&lt;/code> 和 &lt;code>struct&lt;/code> 外, 我们再定义一个 &lt;code>DHCPBytes&lt;/code> &lt;code>trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>pub trait DHCPBytes {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以上除了定义 &lt;code&gt;enum&lt;/code&gt; 和 &lt;code&gt;struct&lt;/code&gt; 外, 我们再定义一个 &lt;code&gt;DHCPBytes&lt;/code&gt; &lt;code&gt;trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;pub trait DHCPBytes {
 fn to_bytes(&amp;amp;self) -&amp;gt; BytesMut;
 }
-&lt;/code>&lt;/pre>&lt;p>并要求所有实现该 &lt;code>trait&lt;/code> 的元素都必须实现 &lt;code>to_bytes&lt;/code> 方法以便将对应元素转换为二进制 &lt;code>bytes&lt;/code> 从而在 &lt;code>UDP&lt;/code> 报文中进行传输. 其中 &lt;code>BytesMut&lt;/code> 由 &lt;code>bytes&lt;/code> 这个 &lt;code>crate&lt;/code> 提供, 而 &lt;code>bytes&lt;/code> 库主要在于提供高效的针对字节缓冲的操作. &lt;code>Bytes&lt;/code> 作为一个高效的存储与操作连续内存空间的容器, 其设计的主要目标在于网络编码以及其他一些应用场景.&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl DHCPBytes for DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;并要求所有实现该 &lt;code&gt;trait&lt;/code&gt; 的元素都必须实现 &lt;code&gt;to_bytes&lt;/code&gt; 方法以便将对应元素转换为二进制 &lt;code&gt;bytes&lt;/code&gt; 从而在 &lt;code&gt;UDP&lt;/code&gt; 报文中进行传输. 其中 &lt;code&gt;BytesMut&lt;/code&gt; 由 &lt;code&gt;bytes&lt;/code&gt; 这个 &lt;code&gt;crate&lt;/code&gt; 提供, 而 &lt;code&gt;bytes&lt;/code&gt; 库主要在于提供高效的针对字节缓冲的操作. &lt;code&gt;Bytes&lt;/code&gt; 作为一个高效的存储与操作连续内存空间的容器, 其设计的主要目标在于网络编码以及其他一些应用场景.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl DHCPBytes for DHCPDiscover {
 fn to_bytes(&amp;amp;self) -&amp;gt; BytesMut {
 let mut discover_bytes = BytesMut::new();
 discover_bytes.put_u8(self.op as u8);
@@ -157,9 +157,9 @@ discover_bytes.put_u8(*ele);
 discover_bytes
 }
 }
-&lt;/code>&lt;/pre>&lt;p>以上 &lt;code>DHCPDiscover&lt;/code> 实现的 &lt;code>DHCPBytes&lt;/code> 主要是按 &lt;code>RFC 2131&lt;/code> 内定义的报文格式将对应字段转换为 &lt;code>Bytes&lt;/code>. 另外像其中 &lt;code>xid&lt;/code>, &lt;code>secs&lt;/code> 和 &lt;code>ciaddr&lt;/code> 等字段由于在标准中分别采用 &lt;code>4&lt;/code>, &lt;code>2&lt;/code> 和 &lt;code>4&lt;/code> 字节, 分别对应了 &lt;code>32&lt;/code>, &lt;code>16&lt;/code> 和 &lt;code>32&lt;/code> &lt;code>BIT&lt;/code>, 因此为简化此处直接按对应 &lt;code>BIT&lt;/code> 定义了无符整型数据.&lt;/p>
-&lt;p>在完成以上相关 &lt;code>enum&lt;/code> 和 &lt;code>struct&lt;/code> 定义的最后我们继续来实现 &lt;code>main()&lt;/code> 方法:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[tokio::main]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以上 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现的 &lt;code&gt;DHCPBytes&lt;/code&gt; 主要是按 &lt;code&gt;RFC 2131&lt;/code&gt; 内定义的报文格式将对应字段转换为 &lt;code&gt;Bytes&lt;/code&gt;. 另外像其中 &lt;code&gt;xid&lt;/code&gt;, &lt;code&gt;secs&lt;/code&gt; 和 &lt;code&gt;ciaddr&lt;/code&gt; 等字段由于在标准中分别采用 &lt;code&gt;4&lt;/code&gt;, &lt;code&gt;2&lt;/code&gt; 和 &lt;code&gt;4&lt;/code&gt; 字节, 分别对应了 &lt;code&gt;32&lt;/code&gt;, &lt;code&gt;16&lt;/code&gt; 和 &lt;code&gt;32&lt;/code&gt; &lt;code&gt;BIT&lt;/code&gt;, 因此为简化此处直接按对应 &lt;code&gt;BIT&lt;/code&gt; 定义了无符整型数据.&lt;/p&gt;
+&lt;p&gt;在完成以上相关 &lt;code&gt;enum&lt;/code&gt; 和 &lt;code&gt;struct&lt;/code&gt; 定义的最后我们继续来实现 &lt;code&gt;main()&lt;/code&gt; 方法:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[tokio::main]
 async fn main() -&amp;gt; Result&amp;lt;()&amp;gt; {
 let socket = UdpSocket::bind(&amp;#34;0.0.0.0:68&amp;#34;).await?;
 let broadcast = socket.set_broadcast(true);
@@ -205,45 +205,45 @@ Err(e) =&amp;gt; println!(&amp;#34;错误: {:?}&amp;#34;, e),
 }
 Ok(())
 }
-&lt;/code>&lt;/pre>&lt;p>首先通过 &lt;code>UdpSocket::bind&amp;lt;A: ToSocketAddrs&amp;gt;(addr: A)&lt;/code> 函数绑定到本机对应端口, 值得注意的是此处在调用 &lt;code>bind&lt;/code> 函数时后跟了一个 &lt;code>await?&lt;/code> 关键字, 这里的 &lt;code>async/await&lt;/code> 是 &lt;code>Rust&lt;/code> 提供的一个内置使得编写异步代码像同步代码一样的工具, &lt;code>async&lt;/code> 会将相应的代码块转换为一种实现了 &lt;code>Future&lt;/code> &lt;code>Trait&lt;/code> 的状态机, 当调用 &lt;code>await&lt;/code> 时具体的 &lt;code>Runtime&lt;/code> 会挂起当前运行环境直至其返回结果 &lt;code>Future&lt;/code> 准备好. &lt;code>Rust&lt;/code> 并未在标准中提供 &lt;code>async/await&lt;/code> 运行时, 因此我们需要通过 &lt;code>crate&lt;/code> 添加对应依赖, 在此处我们使用 &lt;code>tokio&lt;/code>.&lt;/p>
-&lt;p>以上我们同时还通过 &lt;code>socket.set_broadcast(true)&lt;/code> 显示地将 &lt;code>UDPSocket&lt;/code> 实例设置为广播模式, 在前一篇文章(&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">DHCP 协议分析及实现 - Ⅰ&lt;/a>)内我们也曾介绍过由于在 &lt;code>DHCP&lt;/code> 协议通信之初 &lt;code>客户端&lt;/code> 尚无具体 &lt;code>IP&lt;/code> 地址切也不知道对应 &lt;code>服务端&lt;/code> 所在网络中位置, 而这这好利用 &lt;code>UDP&lt;/code> 的广播特性使得客户端向局域网广播 &lt;code>DHCPDISCOVER&lt;/code> 报文. 对应地通过向 &lt;code>255.255.255.255:67&lt;/code> 发送广播报文.&lt;/p>
-&lt;p>至此我们完成了初步的 &lt;code>DHCP&lt;/code> 协议中 &lt;code>DHCPDISCOVER&lt;/code> 协议的转换与广播, 后续还有包括 &lt;code>DHCPOFFER&lt;/code>, &lt;code>DHCPREQUEST&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 等消息的转换, 发送与解析我们不再赘述, 感兴趣的可以参考 &lt;a href="https://github.com/liloew/inode-rs">liloew/inode-rs&lt;/a> 完整实现.&lt;/p>
-&lt;h2 id="ref">REF&lt;/h2>
-&lt;ol>
-&lt;li>&lt;a href="https://www.rust-lang.org/">Rust Programming Language&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://tokio.rs/">Tokio - An asynchronous Rust runtime&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://github.com/tokio-rs/bytes">tokio-rs/bytes&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://github.com/liloew/inode-rs">liloew/inode-rs&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">DHCP 协议分析及实现 - Ⅰ&lt;/a>&lt;/li>
-&lt;/ol></content></item><item><title>DHCP 协议分析及实现 - Ⅰ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</link><pubDate>Sun, 15 Oct 2023 14:58:16 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</guid><description>&lt;h1 id="背景">背景&lt;/h1>
-&lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;blockquote>
-&lt;p>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p>
-&lt;/blockquote>
-&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
-&lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p></description><content>&lt;h1 id="背景">背景&lt;/h1>
-&lt;p>最近因工作需要接触了 &lt;code>H3C&lt;/code> 的 &lt;code>iNode&lt;/code> 客户端, 参考其官网对 &lt;code>iNode&lt;/code> 的描述:&lt;/p>
-&lt;blockquote>
-&lt;p>iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p>
-&lt;/blockquote>
-&lt;p>以此为发端, 本来主要讨论 &lt;code>DHCP&lt;/code> 协议的设计与实现, 以期最后通过修改 &lt;code>DHCP&lt;/code> 协议实现 &lt;code>私有&lt;/code> 的 &lt;code>DHCP&lt;/code> 协议, 实现一定条件下限制网络访问的目的.&lt;/p>
-&lt;p>同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p>
-&lt;h1 id="分析">分析&lt;/h1>
-&lt;p>&lt;code>DHCP&lt;/code> 协议前身是 &lt;code>BOOTP&lt;/code> 协议, 当前关于 &lt;code>DHCP&lt;/code> 最新的信息可在 &lt;code>RFC 2131&lt;/code> 中查阅, 另外 &lt;code>DHCPv6&lt;/code> 则可在 &lt;code>RFC 3315&lt;/code> 中定义. 不过本文当前仅讨论 &lt;code>DHCPv4&lt;/code>. &lt;code>DHCP&lt;/code> 全称 &lt;code>Dynamic Host Configuration Protocol&lt;/code>, 即 &lt;code>动态主机配置协议&lt;/code>, 是一种使网络管理员能够集中管理和自动分配 &lt;code>IP&lt;/code> 地址的通信协议. 在 &lt;code>IP&lt;/code> 网络中每个连接 &lt;code>Internet&lt;/code> 的设备都需要分配唯一的 &lt;code>IP&lt;/code> 地址, &lt;code>DHCP&lt;/code> 协议可使得网络管理员采用中心化的方式分配 &lt;code>IP&lt;/code> 地址, 并对 &lt;code>IP&lt;/code> 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 &lt;code>IP&lt;/code> 地址请求.&lt;/p>
-&lt;p>同时 &lt;code>DHCP&lt;/code> 使用了 &lt;code>租约&lt;/code> 的概念, 这使得在局域网中可以最大化地使用有限的 &lt;code>IP&lt;/code> 地址资源, 同时 &lt;code>DHCP&lt;/code> 也支持为计算机分配静态地址.&lt;/p>
-&lt;ul>
-&lt;li>&lt;code>DHCP&lt;/code> 协议是一种基于 &lt;code>UDP&lt;/code> 之上的应用层协议, 主要是因为在依据 &lt;code>DHCP&lt;/code> 获取 &lt;code>IP&lt;/code> 地址前计算机尚无有效的 &lt;code>IP&lt;/code> 地址, 此时 &lt;code>客户端&lt;/code> 可利用 &lt;code>UDP&lt;/code> 的广播特性向局域网内广播 &lt;code>DHCP&lt;/code> 报文, 同时 &lt;code>DHCP 服务器&lt;/code> 亦采用广播的形式向局域网内响应对应请求. &lt;code>DHCPv4&lt;/code> 定义了以下几种消息:&lt;/li>
-&lt;li>&lt;code>DHCPDISCOVER&lt;/code> 消息用于 &lt;code>客户端&lt;/code> 广播以确定局域网内 &lt;code>服务器&lt;/code>.&lt;/li>
-&lt;li>&lt;code>DHCPOFFER&lt;/code> 消息用于服务端响应客户端的 &lt;code>DHCPDISCOVER&lt;/code> 消息并向客户端提供配置参数.&lt;/li>
-&lt;li>&lt;code>DHCPREQUEST&lt;/code> 消息主要用于客户端依据服务端提供的配置参数向服务端请求 &lt;code>IP&lt;/code> 地址.&lt;/li>
-&lt;li>&lt;code>DHCPACK&lt;/code> 消息用于服务端向客户端依据配置参数确认分配的 &lt;code>IP 地址&lt;/code>.&lt;/li>
-&lt;li>&lt;code>DHCPNAK&lt;/code> 消息用于服务端通知客户端网络地址错误或客户端地址过期等.&lt;/li>
-&lt;li>&lt;code>DHCPDECLINE&lt;/code> 消息用于客户端向服务端指示已拥有网络地址.&lt;/li>
-&lt;li>&lt;code>DHCPRELEASE&lt;/code> 消息用于客户端告知服务端释放对应的网络地址.&lt;/li>
-&lt;li>&lt;code>DHCPINFORM&lt;/code> 消息用于客户端向服务端请求本地配置.&lt;/li>
-&lt;/ul>
-&lt;p>&lt;code>RFC 2131&lt;/code> 在定义 &lt;code>DHCP&lt;/code> 的几种消息的同时也定义了 &lt;code>DHCP&lt;/code> 报文格式:&lt;/p>
-&lt;pre tabindex="0">&lt;code> 0 1 2 3
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;首先通过 &lt;code&gt;UdpSocket::bind&amp;lt;A: ToSocketAddrs&amp;gt;(addr: A)&lt;/code&gt; 函数绑定到本机对应端口, 值得注意的是此处在调用 &lt;code&gt;bind&lt;/code&gt; 函数时后跟了一个 &lt;code&gt;await?&lt;/code&gt; 关键字, 这里的 &lt;code&gt;async/await&lt;/code&gt; 是 &lt;code&gt;Rust&lt;/code&gt; 提供的一个内置使得编写异步代码像同步代码一样的工具, &lt;code&gt;async&lt;/code&gt; 会将相应的代码块转换为一种实现了 &lt;code&gt;Future&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 的状态机, 当调用 &lt;code&gt;await&lt;/code&gt; 时具体的 &lt;code&gt;Runtime&lt;/code&gt; 会挂起当前运行环境直至其返回结果 &lt;code&gt;Future&lt;/code&gt; 准备好. &lt;code&gt;Rust&lt;/code&gt; 并未在标准中提供 &lt;code&gt;async/await&lt;/code&gt; 运行时, 因此我们需要通过 &lt;code&gt;crate&lt;/code&gt; 添加对应依赖, 在此处我们使用 &lt;code&gt;tokio&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;以上我们同时还通过 &lt;code&gt;socket.set_broadcast(true)&lt;/code&gt; 显示地将 &lt;code&gt;UDPSocket&lt;/code&gt; 实例设置为广播模式, 在前一篇文章(&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;DHCP 协议分析及实现 - Ⅰ&lt;/a&gt;)内我们也曾介绍过由于在 &lt;code&gt;DHCP&lt;/code&gt; 协议通信之初 &lt;code&gt;客户端&lt;/code&gt; 尚无具体 &lt;code&gt;IP&lt;/code&gt; 地址切也不知道对应 &lt;code&gt;服务端&lt;/code&gt; 所在网络中位置, 而这这好利用 &lt;code&gt;UDP&lt;/code&gt; 的广播特性使得客户端向局域网广播 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 报文. 对应地通过向 &lt;code&gt;255.255.255.255:67&lt;/code&gt; 发送广播报文.&lt;/p&gt;
+&lt;p&gt;至此我们完成了初步的 &lt;code&gt;DHCP&lt;/code&gt; 协议中 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 协议的转换与广播, 后续还有包括 &lt;code&gt;DHCPOFFER&lt;/code&gt;, &lt;code&gt;DHCPREQUEST&lt;/code&gt; 和 &lt;code&gt;DHCPACK&lt;/code&gt; 等消息的转换, 发送与解析我们不再赘述, 感兴趣的可以参考 &lt;a href="https://github.com/liloew/inode-rs"&gt;liloew/inode-rs&lt;/a&gt; 完整实现.&lt;/p&gt;
+&lt;h2 id="ref"&gt;REF&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.rust-lang.org/"&gt;Rust Programming Language&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://tokio.rs/"&gt;Tokio - An asynchronous Rust runtime&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/tokio-rs/bytes"&gt;tokio-rs/bytes&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/liloew/inode-rs"&gt;liloew/inode-rs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;DHCP 协议分析及实现 - Ⅰ&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;</content></item><item><title>DHCP 协议分析及实现 - Ⅰ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</link><pubDate>Sun, 15 Oct 2023 14:58:16 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-1/</guid><description>&lt;h1 id="背景"&gt;背景&lt;/h1&gt;
+&lt;p&gt;最近因工作需要接触了 &lt;code&gt;H3C&lt;/code&gt; 的 &lt;code&gt;iNode&lt;/code&gt; 客户端, 参考其官网对 &lt;code&gt;iNode&lt;/code&gt; 的描述:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;以此为发端, 本来主要讨论 &lt;code&gt;DHCP&lt;/code&gt; 协议的设计与实现, 以期最后通过修改 &lt;code&gt;DHCP&lt;/code&gt; 协议实现 &lt;code&gt;私有&lt;/code&gt; 的 &lt;code&gt;DHCP&lt;/code&gt; 协议, 实现一定条件下限制网络访问的目的.&lt;/p&gt;
+&lt;p&gt;同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p&gt;</description><content>&lt;h1 id="背景"&gt;背景&lt;/h1&gt;
+&lt;p&gt;最近因工作需要接触了 &lt;code&gt;H3C&lt;/code&gt; 的 &lt;code&gt;iNode&lt;/code&gt; 客户端, 参考其官网对 &lt;code&gt;iNode&lt;/code&gt; 的描述:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;iNode智能客户端是H3C公司自行设计开发的基于Windows的多业务接入客户端软件，提供802.1x、Portal、VPN等多种认证方式，可以与H3C以太网交换机、路由器、VPN网关等网络设备共同组网，实现对局域网、广域网、VPN、无线接入的用户认证，是对用户终端进行身份验证、安全状态评估以及安全策略实施的主体，可以按照企业接入安全策略的要求，实现基于角色/身份的权限和安全控制。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;以此为发端, 本来主要讨论 &lt;code&gt;DHCP&lt;/code&gt; 协议的设计与实现, 以期最后通过修改 &lt;code&gt;DHCP&lt;/code&gt; 协议实现 &lt;code&gt;私有&lt;/code&gt; 的 &lt;code&gt;DHCP&lt;/code&gt; 协议, 实现一定条件下限制网络访问的目的.&lt;/p&gt;
+&lt;p&gt;同时亦声明本文仅就技术上讨论一种私有协议实现的可能性, 只有如何实现以及是否可行并不在本文讨论范围内.&lt;/p&gt;
+&lt;h1 id="分析"&gt;分析&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;DHCP&lt;/code&gt; 协议前身是 &lt;code&gt;BOOTP&lt;/code&gt; 协议, 当前关于 &lt;code&gt;DHCP&lt;/code&gt; 最新的信息可在 &lt;code&gt;RFC 2131&lt;/code&gt; 中查阅, 另外 &lt;code&gt;DHCPv6&lt;/code&gt; 则可在 &lt;code&gt;RFC 3315&lt;/code&gt; 中定义. 不过本文当前仅讨论 &lt;code&gt;DHCPv4&lt;/code&gt;. &lt;code&gt;DHCP&lt;/code&gt; 全称 &lt;code&gt;Dynamic Host Configuration Protocol&lt;/code&gt;, 即 &lt;code&gt;动态主机配置协议&lt;/code&gt;, 是一种使网络管理员能够集中管理和自动分配 &lt;code&gt;IP&lt;/code&gt; 地址的通信协议. 在 &lt;code&gt;IP&lt;/code&gt; 网络中每个连接 &lt;code&gt;Internet&lt;/code&gt; 的设备都需要分配唯一的 &lt;code&gt;IP&lt;/code&gt; 地址, &lt;code&gt;DHCP&lt;/code&gt; 协议可使得网络管理员采用中心化的方式分配 &lt;code&gt;IP&lt;/code&gt; 地址, 并对 &lt;code&gt;IP&lt;/code&gt; 地址的使用进行必要的管理, 当某台计算机移动到网络其他位置时, 能自动收到新的 &lt;code&gt;IP&lt;/code&gt; 地址请求.&lt;/p&gt;
+&lt;p&gt;同时 &lt;code&gt;DHCP&lt;/code&gt; 使用了 &lt;code&gt;租约&lt;/code&gt; 的概念, 这使得在局域网中可以最大化地使用有限的 &lt;code&gt;IP&lt;/code&gt; 地址资源, 同时 &lt;code&gt;DHCP&lt;/code&gt; 也支持为计算机分配静态地址.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;DHCP&lt;/code&gt; 协议是一种基于 &lt;code&gt;UDP&lt;/code&gt; 之上的应用层协议, 主要是因为在依据 &lt;code&gt;DHCP&lt;/code&gt; 获取 &lt;code&gt;IP&lt;/code&gt; 地址前计算机尚无有效的 &lt;code&gt;IP&lt;/code&gt; 地址, 此时 &lt;code&gt;客户端&lt;/code&gt; 可利用 &lt;code&gt;UDP&lt;/code&gt; 的广播特性向局域网内广播 &lt;code&gt;DHCP&lt;/code&gt; 报文, 同时 &lt;code&gt;DHCP 服务器&lt;/code&gt; 亦采用广播的形式向局域网内响应对应请求. &lt;code&gt;DHCPv4&lt;/code&gt; 定义了以下几种消息:&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息用于 &lt;code&gt;客户端&lt;/code&gt; 广播以确定局域网内 &lt;code&gt;服务器&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPOFFER&lt;/code&gt; 消息用于服务端响应客户端的 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息并向客户端提供配置参数.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPREQUEST&lt;/code&gt; 消息主要用于客户端依据服务端提供的配置参数向服务端请求 &lt;code&gt;IP&lt;/code&gt; 地址.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPACK&lt;/code&gt; 消息用于服务端向客户端依据配置参数确认分配的 &lt;code&gt;IP 地址&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPNAK&lt;/code&gt; 消息用于服务端通知客户端网络地址错误或客户端地址过期等.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPDECLINE&lt;/code&gt; 消息用于客户端向服务端指示已拥有网络地址.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPRELEASE&lt;/code&gt; 消息用于客户端告知服务端释放对应的网络地址.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;DHCPINFORM&lt;/code&gt; 消息用于客户端向服务端请求本地配置.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;RFC 2131&lt;/code&gt; 在定义 &lt;code&gt;DHCP&lt;/code&gt; 的几种消息的同时也定义了 &lt;code&gt;DHCP&lt;/code&gt; 报文格式:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; 0 1 2 3
 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | op (1) | htype (1) | hlen (1) | hops (1) |
@@ -274,54 +274,54 @@ Ok(())
 | |
 | options (variable) |
 +---------------------------------------------------------------+
-&lt;/code>&lt;/pre>&lt;ul>
-&lt;li>
-&lt;p>&lt;code>op&lt;/code> 字段定义了消息的方向 &lt;code>1&lt;/code> 为 &lt;code>客户端&lt;/code> 向 &lt;code>服务端&lt;/code> 发生请求, &lt;code>2&lt;/code> 则为 &lt;code>服务端&lt;/code> 发回的响应.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>htype&lt;/code> 字段定义了 &lt;code>硬件地址类型&lt;/code>, &lt;code>1&lt;/code> 为 &lt;code>10mb&lt;/code> 以太网, 具体定义可参见 &lt;code>RFC 1700&lt;/code>, 在 &lt;code>DHCP&lt;/code> 中一般使用 &lt;code>1&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>hlen&lt;/code> 字段表示 &lt;code>硬件地址长度&lt;/code>, 依据 &lt;code>htype&lt;/code> 定义当 &lt;code>htype&lt;/code> 为 &lt;code>1&lt;/code>, 即 &lt;code>以太网&lt;/code> 时, 该字段为 &lt;code>6&lt;/code>, 也即 &lt;code>MAC&lt;/code> 地址长度.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>hops&lt;/code> 字段表示 &lt;code>DHCP&lt;/code> 协议经过的节点数, 客户端在初始发送 &lt;code>DHCP&lt;/code> 请求时将其设置为 &lt;code>0&lt;/code>, &lt;code>DHCP&lt;/code> 协议的 &lt;code>中继&lt;/code> 节点可选地增加该字段的值.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>xid&lt;/code> 字段表示 &lt;code>事务 ID&lt;/code>, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>secs&lt;/code> 字段为客户端获取 &lt;code>IP&lt;/code> 到进行地址 &lt;code>续约&lt;/code> 时所经历的秒数.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>flags&lt;/code> 字段当前在 &lt;code>DHCP&lt;/code> 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 &lt;code>DHCP&lt;/code> &lt;code>服务端&lt;/code> 或 &lt;code>中继&lt;/code> 节点是否将广播信息发送到客户端所在的子网.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>ciaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>, 仅当客户端在 &lt;code>BOUND&lt;/code>, &lt;code>RENEW&lt;/code> 或者 &lt;code>REBINDING&lt;/code> 状态时才填充该字段.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>yiaddr&lt;/code> 字段表示 &lt;code>your&lt;/code> &lt;code>客户端&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>siaddr&lt;/code> 字段为下一 &lt;code>服务端&lt;/code> 节点 &lt;code>IP&lt;/code>, 仅当在 &lt;code>DHCPOFFER&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 请求中填充该字段.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>giaddr&lt;/code> 字段为 &lt;code>中继节点&lt;/code> &lt;code>IP 地址&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>chaddr&lt;/code> 字段为 &lt;code>客户端&lt;/code> &lt;code>硬件地址&lt;/code>, 一般为 &lt;code>MAC 地址&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>sname&lt;/code> 字段为可选的 &lt;code>服务器主机名&lt;/code>, 并且以 &lt;code>null&lt;/code> 字符串结束, 也即 &lt;code>0x00&lt;/code>.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>file&lt;/code> 字段为 &lt;code>启动文件名&lt;/code>, 在 &lt;code>DHCPDISCOVER&lt;/code> 消息中以常规文件名或 &lt;code>null&lt;/code> 表示, 在 &lt;code>DHCPOFFER&lt;/code> 消息中以全限定路径名表示.&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>options&lt;/code> 字段是变长的可选项. 其中首 4 位为固定的 &lt;code>magic cookie&lt;/code> - [0x63, 0x82, 0x53, 0x63].&lt;/p>
-&lt;/li>
-&lt;/ul>
-&lt;pre tabindex="0">&lt;code> Server Client Server
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;op&lt;/code&gt; 字段定义了消息的方向 &lt;code&gt;1&lt;/code&gt; 为 &lt;code&gt;客户端&lt;/code&gt; 向 &lt;code&gt;服务端&lt;/code&gt; 发生请求, &lt;code&gt;2&lt;/code&gt; 则为 &lt;code&gt;服务端&lt;/code&gt; 发回的响应.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;htype&lt;/code&gt; 字段定义了 &lt;code&gt;硬件地址类型&lt;/code&gt;, &lt;code&gt;1&lt;/code&gt; 为 &lt;code&gt;10mb&lt;/code&gt; 以太网, 具体定义可参见 &lt;code&gt;RFC 1700&lt;/code&gt;, 在 &lt;code&gt;DHCP&lt;/code&gt; 中一般使用 &lt;code&gt;1&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;hlen&lt;/code&gt; 字段表示 &lt;code&gt;硬件地址长度&lt;/code&gt;, 依据 &lt;code&gt;htype&lt;/code&gt; 定义当 &lt;code&gt;htype&lt;/code&gt; 为 &lt;code&gt;1&lt;/code&gt;, 即 &lt;code&gt;以太网&lt;/code&gt; 时, 该字段为 &lt;code&gt;6&lt;/code&gt;, 也即 &lt;code&gt;MAC&lt;/code&gt; 地址长度.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;hops&lt;/code&gt; 字段表示 &lt;code&gt;DHCP&lt;/code&gt; 协议经过的节点数, 客户端在初始发送 &lt;code&gt;DHCP&lt;/code&gt; 请求时将其设置为 &lt;code&gt;0&lt;/code&gt;, &lt;code&gt;DHCP&lt;/code&gt; 协议的 &lt;code&gt;中继&lt;/code&gt; 节点可选地增加该字段的值.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;xid&lt;/code&gt; 字段表示 &lt;code&gt;事务 ID&lt;/code&gt;, 客户端选择一个随机数, 并在其后客户端发送或是服务端发回响应过程中使用该值.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;secs&lt;/code&gt; 字段为客户端获取 &lt;code&gt;IP&lt;/code&gt; 到进行地址 &lt;code&gt;续约&lt;/code&gt; 时所经历的秒数.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;flags&lt;/code&gt; 字段当前在 &lt;code&gt;DHCP&lt;/code&gt; 协议中仅采用了高 1 位, 后续的 15 位当前都是保留的, 使用的 1 位主要用于提示 &lt;code&gt;DHCP&lt;/code&gt; &lt;code&gt;服务端&lt;/code&gt; 或 &lt;code&gt;中继&lt;/code&gt; 节点是否将广播信息发送到客户端所在的子网.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;ciaddr&lt;/code&gt; 字段为 &lt;code&gt;客户端&lt;/code&gt; &lt;code&gt;IP 地址&lt;/code&gt;, 仅当客户端在 &lt;code&gt;BOUND&lt;/code&gt;, &lt;code&gt;RENEW&lt;/code&gt; 或者 &lt;code&gt;REBINDING&lt;/code&gt; 状态时才填充该字段.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;yiaddr&lt;/code&gt; 字段表示 &lt;code&gt;your&lt;/code&gt; &lt;code&gt;客户端&lt;/code&gt; &lt;code&gt;IP 地址&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;siaddr&lt;/code&gt; 字段为下一 &lt;code&gt;服务端&lt;/code&gt; 节点 &lt;code&gt;IP&lt;/code&gt;, 仅当在 &lt;code&gt;DHCPOFFER&lt;/code&gt; 和 &lt;code&gt;DHCPACK&lt;/code&gt; 请求中填充该字段.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;giaddr&lt;/code&gt; 字段为 &lt;code&gt;中继节点&lt;/code&gt; &lt;code&gt;IP 地址&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;chaddr&lt;/code&gt; 字段为 &lt;code&gt;客户端&lt;/code&gt; &lt;code&gt;硬件地址&lt;/code&gt;, 一般为 &lt;code&gt;MAC 地址&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;sname&lt;/code&gt; 字段为可选的 &lt;code&gt;服务器主机名&lt;/code&gt;, 并且以 &lt;code&gt;null&lt;/code&gt; 字符串结束, 也即 &lt;code&gt;0x00&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;file&lt;/code&gt; 字段为 &lt;code&gt;启动文件名&lt;/code&gt;, 在 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息中以常规文件名或 &lt;code&gt;null&lt;/code&gt; 表示, 在 &lt;code&gt;DHCPOFFER&lt;/code&gt; 消息中以全限定路径名表示.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;options&lt;/code&gt; 字段是变长的可选项. 其中首 4 位为固定的 &lt;code&gt;magic cookie&lt;/code&gt; - [0x63, 0x82, 0x53, 0x63].&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Server Client Server
 (not selected) (selected)
 v v v
 | | |
@@ -362,17 +362,17 @@ configuration | configuration
 | | Discards lease
 | | |
 v v v
-&lt;/code>&lt;/pre>&lt;p>上图展示了局域网内 &lt;code>DHCP&lt;/code> 信令通信的流程.&lt;/p>
-&lt;ul>
-&lt;li>客户端在本地局域网内广播 &lt;code>DHCPDISCOVER&lt;/code> 消息, 如果 &lt;code>DHCP&lt;/code> 服务端与客户端不处于同一物理网段则可通过可选的 &lt;code>中继&lt;/code> 节点进行中继转发.&lt;/li>
-&lt;li>局域网内所有服务端都可能通过 &lt;code>DHCPOFFER&lt;/code> 消息对 &lt;code>DHCPDISCOVER&lt;/code> 消息进行响应, 同时在 &lt;code>DHCPOFFER&lt;/code> 消息内通过 &lt;code>yiaddr&lt;/code> 字段指示可用的网络地址, 同时也在 &lt;code>options&lt;/code> 字段内包含额外的参数.&lt;/li>
-&lt;li>客户端可能会从一或多个服务端收到收到一或多个 &lt;code>DHCPOFFER&lt;/code> 消息. 客户端根据在 &lt;code>DHCPOFFER&lt;/code> 消息内包含的参数通过广播 &lt;code>DHCPREQUEST&lt;/code> 消息选择一个服务端进行响应, 并通过 &lt;code>服务端标识&lt;/code>(&lt;code>server identifier&lt;/code>) 指示具体选择的服务器. 同时在 &lt;code>yiaddr&lt;/code> 字段内保存欲请求的 &lt;code>IP&lt;/code>.&lt;/li>
-&lt;li>对于未被选中的服务端收到 &lt;code>DHCPREQUEST&lt;/code> 广播时(根据 &lt;code>server identifier&lt;/code> 字段)明确客户端拒绝了其预分配的 &lt;code>IP&lt;/code> 地址. 针对被选中的服务端则内部提交并将对应网络地址与客户端相绑定, 同时通过 &lt;code>DHCPACK&lt;/code> 消息通知客户端. 在 &lt;code>DHCPACK&lt;/code> 消息内的 &lt;code>yiaddr&lt;/code> 字段同时包含选择的网络地址. 如果被选中的服务端无法响应 &lt;code>DHCPREQUEST&lt;/code> 消息(如待分配的网络地址已被使用)则应当通过 &lt;code>DHCPNAK&lt;/code> 向客户端响应.&lt;/li>
-&lt;li>客户端收到 &lt;code>DHCPACK&lt;/code> 时需根据 &lt;code>options&lt;/code> 字段内配置的参数进行最后的检查(如通过 &lt;code>ARP&lt;/code> 检查分配的网络地址是否可用), 如果客户端发现该网络地址已被使用则应当通过 &lt;code>DHCPDECLINE&lt;/code> 向服务端进行响应并重启以上配置流程. 为防止过多的网络流量客户端应当至少等待 &lt;code>10s&lt;/code> 再次进行配置. 如果客户端收到 &lt;code>DHCPNAK&lt;/code> 则立即重启配置流程.&lt;/li>
-&lt;li>客户端可通过在 &lt;code>DHCPRELEASE&lt;/code> 消息的 &lt;code>client identifier&lt;/code> 或 &lt;code>chaddr&lt;/code> 字段内包含标识以告知服务端其已放弃对网络地址的租用.&lt;/li>
-&lt;/ul>
-&lt;p>客户端可能收到来自服务端的 &lt;code>DHCPOFFER&lt;/code>, &lt;code>DHCPACK&lt;/code> 和 &lt;code>DHCPNAK&lt;/code> 三种消息; 服务端可收到来自客户端的 &lt;code>DHCPDISCOVER&lt;/code>, &lt;code>DHCPREQUEST&lt;/code>, &lt;code>DHCPDECLINE&lt;/code>, &lt;code>DHCPRELEASE&lt;/code> 和 &lt;code>DHCPINFORM&lt;/code> 五种消息. 下图则详细描述了 &lt;code>DHCP&lt;/code> 客户端的状态间流转:&lt;/p>
-&lt;pre tabindex="0">&lt;code> -------- -------
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;上图展示了局域网内 &lt;code&gt;DHCP&lt;/code&gt; 信令通信的流程.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;客户端在本地局域网内广播 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息, 如果 &lt;code&gt;DHCP&lt;/code&gt; 服务端与客户端不处于同一物理网段则可通过可选的 &lt;code&gt;中继&lt;/code&gt; 节点进行中继转发.&lt;/li&gt;
+&lt;li&gt;局域网内所有服务端都可能通过 &lt;code&gt;DHCPOFFER&lt;/code&gt; 消息对 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息进行响应, 同时在 &lt;code&gt;DHCPOFFER&lt;/code&gt; 消息内通过 &lt;code&gt;yiaddr&lt;/code&gt; 字段指示可用的网络地址, 同时也在 &lt;code&gt;options&lt;/code&gt; 字段内包含额外的参数.&lt;/li&gt;
+&lt;li&gt;客户端可能会从一或多个服务端收到收到一或多个 &lt;code&gt;DHCPOFFER&lt;/code&gt; 消息. 客户端根据在 &lt;code&gt;DHCPOFFER&lt;/code&gt; 消息内包含的参数通过广播 &lt;code&gt;DHCPREQUEST&lt;/code&gt; 消息选择一个服务端进行响应, 并通过 &lt;code&gt;服务端标识&lt;/code&gt;(&lt;code&gt;server identifier&lt;/code&gt;) 指示具体选择的服务器. 同时在 &lt;code&gt;yiaddr&lt;/code&gt; 字段内保存欲请求的 &lt;code&gt;IP&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;对于未被选中的服务端收到 &lt;code&gt;DHCPREQUEST&lt;/code&gt; 广播时(根据 &lt;code&gt;server identifier&lt;/code&gt; 字段)明确客户端拒绝了其预分配的 &lt;code&gt;IP&lt;/code&gt; 地址. 针对被选中的服务端则内部提交并将对应网络地址与客户端相绑定, 同时通过 &lt;code&gt;DHCPACK&lt;/code&gt; 消息通知客户端. 在 &lt;code&gt;DHCPACK&lt;/code&gt; 消息内的 &lt;code&gt;yiaddr&lt;/code&gt; 字段同时包含选择的网络地址. 如果被选中的服务端无法响应 &lt;code&gt;DHCPREQUEST&lt;/code&gt; 消息(如待分配的网络地址已被使用)则应当通过 &lt;code&gt;DHCPNAK&lt;/code&gt; 向客户端响应.&lt;/li&gt;
+&lt;li&gt;客户端收到 &lt;code&gt;DHCPACK&lt;/code&gt; 时需根据 &lt;code&gt;options&lt;/code&gt; 字段内配置的参数进行最后的检查(如通过 &lt;code&gt;ARP&lt;/code&gt; 检查分配的网络地址是否可用), 如果客户端发现该网络地址已被使用则应当通过 &lt;code&gt;DHCPDECLINE&lt;/code&gt; 向服务端进行响应并重启以上配置流程. 为防止过多的网络流量客户端应当至少等待 &lt;code&gt;10s&lt;/code&gt; 再次进行配置. 如果客户端收到 &lt;code&gt;DHCPNAK&lt;/code&gt; 则立即重启配置流程.&lt;/li&gt;
+&lt;li&gt;客户端可通过在 &lt;code&gt;DHCPRELEASE&lt;/code&gt; 消息的 &lt;code&gt;client identifier&lt;/code&gt; 或 &lt;code&gt;chaddr&lt;/code&gt; 字段内包含标识以告知服务端其已放弃对网络地址的租用.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;客户端可能收到来自服务端的 &lt;code&gt;DHCPOFFER&lt;/code&gt;, &lt;code&gt;DHCPACK&lt;/code&gt; 和 &lt;code&gt;DHCPNAK&lt;/code&gt; 三种消息; 服务端可收到来自客户端的 &lt;code&gt;DHCPDISCOVER&lt;/code&gt;, &lt;code&gt;DHCPREQUEST&lt;/code&gt;, &lt;code&gt;DHCPDECLINE&lt;/code&gt;, &lt;code&gt;DHCPRELEASE&lt;/code&gt; 和 &lt;code&gt;DHCPINFORM&lt;/code&gt; 五种消息. 下图则详细描述了 &lt;code&gt;DHCP&lt;/code&gt; 客户端的状态间流转:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; -------- -------
 | | +--------------------------&amp;gt;| |&amp;lt;-------------------+
 | INIT- | | +--------------------&amp;gt;| INIT | |
 | REBOOT |DHCPNAK/ +----------&amp;gt;| |&amp;lt;---+ |
@@ -415,15 +415,15 @@ to leasing server | | |
 +-&amp;gt;| RENEWING | |
 | |----------------------------+
 ----------
-&lt;/code>&lt;/pre>&lt;h2 id="options">OPTIONS&lt;/h2>
-&lt;p>&lt;code>options&lt;/code> 定义为 2 字节的 &lt;code>Code&lt;/code> 和 1 字节的 &lt;code>Len&lt;/code>, 而后则依据 &lt;code>Len&lt;/code> 包含指定长度字节的数据体. 由于当前 &lt;code>options&lt;/code> 众多当前仅列举一些比较重要的 &lt;code>options&lt;/code>.&lt;/p>
-&lt;ol start="0">
-&lt;li>
-&lt;p>&lt;code>magic cookie&lt;/code>, 正如前文所述, 在 &lt;code>DHCP&lt;/code> 报文内包含 4 字节的 &lt;code>magic cookie&lt;/code>, 其值为 [0x63, 0x82, 0x53, 0x63].&lt;/p>
-&lt;/li>
-&lt;li>
-&lt;p>&lt;code>DHCP Message Type&lt;/code> 该选项编码为 &lt;code>53&lt;/code>, 其后在 &lt;code>Len&lt;/code> 内定义了 1 字节的数据体, 即 &lt;code>Type&lt;/code>, 而 &lt;code>Type&lt;/code> 在为 &lt;code>0x01 ~ 0x08&lt;/code> 若干种不同的 &lt;code>DHCP&lt;/code> 消息类型.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Value Message Type
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id="options"&gt;OPTIONS&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;options&lt;/code&gt; 定义为 2 字节的 &lt;code&gt;Code&lt;/code&gt; 和 1 字节的 &lt;code&gt;Len&lt;/code&gt;, 而后则依据 &lt;code&gt;Len&lt;/code&gt; 包含指定长度字节的数据体. 由于当前 &lt;code&gt;options&lt;/code&gt; 众多当前仅列举一些比较重要的 &lt;code&gt;options&lt;/code&gt;.&lt;/p&gt;
+&lt;ol start="0"&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;magic cookie&lt;/code&gt;, 正如前文所述, 在 &lt;code&gt;DHCP&lt;/code&gt; 报文内包含 4 字节的 &lt;code&gt;magic cookie&lt;/code&gt;, 其值为 [0x63, 0x82, 0x53, 0x63].&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;DHCP Message Type&lt;/code&gt; 该选项编码为 &lt;code&gt;53&lt;/code&gt;, 其后在 &lt;code&gt;Len&lt;/code&gt; 内定义了 1 字节的数据体, 即 &lt;code&gt;Type&lt;/code&gt;, 而 &lt;code&gt;Type&lt;/code&gt; 在为 &lt;code&gt;0x01 ~ 0x08&lt;/code&gt; 若干种不同的 &lt;code&gt;DHCP&lt;/code&gt; 消息类型.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Value Message Type
 ----- ------------
 1 DHCPDISCOVER
 2 DHCPOFFER
@@ -437,71 +437,71 @@ Code Len Type
 +-----+-----+-----+
 | 53 | 1 | 1-9 |
 +-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Client-identifier&lt;/code> 该选项编码为 &lt;code>61&lt;/code>, 其后在 &lt;code>Len&lt;/code> 内定义了 &lt;code>n&lt;/code> 字节长度的数据体, 其中包含 &lt;code>Type&lt;/code> 1 字节和 &lt;code>Client-Identifier&lt;/code> &lt;code>n-1&lt;/code> 字节. 其中 &lt;code>Client-Identifier&lt;/code> 主要用于服务端在其数据库内鉴别查找客户端, 在 &lt;code>DHCP&lt;/code> 语义环境下 &lt;code>Type&lt;/code> 通常为 &lt;code>0x01&lt;/code> 即 &lt;code>硬件地址&lt;/code>（&lt;code>MAC&lt;/code>), 同时 &lt;code>Client-Identifier&lt;/code> 至少为 2 字节, 如果为 &lt;code>MAC&lt;/code> 地址的话则为 6 字节.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len Type Client-Identifier
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Client-identifier&lt;/code&gt; 该选项编码为 &lt;code&gt;61&lt;/code&gt;, 其后在 &lt;code&gt;Len&lt;/code&gt; 内定义了 &lt;code&gt;n&lt;/code&gt; 字节长度的数据体, 其中包含 &lt;code&gt;Type&lt;/code&gt; 1 字节和 &lt;code&gt;Client-Identifier&lt;/code&gt; &lt;code&gt;n-1&lt;/code&gt; 字节. 其中 &lt;code&gt;Client-Identifier&lt;/code&gt; 主要用于服务端在其数据库内鉴别查找客户端, 在 &lt;code&gt;DHCP&lt;/code&gt; 语义环境下 &lt;code&gt;Type&lt;/code&gt; 通常为 &lt;code&gt;0x01&lt;/code&gt; 即 &lt;code&gt;硬件地址&lt;/code&gt;（&lt;code&gt;MAC&lt;/code&gt;), 同时 &lt;code&gt;Client-Identifier&lt;/code&gt; 至少为 2 字节, 如果为 &lt;code&gt;MAC&lt;/code&gt; 地址的话则为 6 字节.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len Type Client-Identifier
 +-----+-----+-----+-----+-----+---
 | 61 | n | t1 | i1 | i2 | ...
 +-----+-----+-----+-----+-----+---
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Requested IP Address&lt;/code> 该选项用于客户端在 &lt;code>DHCPDISCOVER&lt;/code> 消息中向服务端请求指定的 &lt;code>IP&lt;/code>.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len Address
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Requested IP Address&lt;/code&gt; 该选项用于客户端在 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 消息中向服务端请求指定的 &lt;code&gt;IP&lt;/code&gt;.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len Address
 +-----+-----+-----+-----+-----+-----+
 | 50 | 4 | a1 | a2 | a3 | a4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Parameter Request List&lt;/code> 该选项用于 &lt;code>DHCP&lt;/code> 客户端向服务端请求特定的配置.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len Option Codes
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Parameter Request List&lt;/code&gt; 该选项用于 &lt;code&gt;DHCP&lt;/code&gt; 客户端向服务端请求特定的配置.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len Option Codes
 +-----+-----+-----+-----+---
 | 55 | n | c1 | c2 | ...
 +-----+-----+-----+-----+---
-&lt;/code>&lt;/pre>&lt;p>当前可选的配置有:&lt;/p>
-&lt;pre tabindex="0">&lt;code>Subnet Mask - 0x01
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;当前可选的配置有:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;Subnet Mask - 0x01
 Router Option - 0x03
 Domain Name Server Option - 0x06
 Network Time Protocol Servers Option - 0x42
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>End Option&lt;/code> 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 &lt;code>RFC&lt;/code> 要求 &lt;code>options&lt;/code> 字段需填充至少 &lt;code>312&lt;/code> 且至多 &lt;code>576&lt;/code> 字节.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;End Option&lt;/code&gt; 该选项为结束标识, 用于标识消息体的结束, 对应客户端发送的消息可立即结束于此处, 对应服务端发回的消息 &lt;code&gt;RFC&lt;/code&gt; 要求 &lt;code&gt;options&lt;/code&gt; 字段需填充至少 &lt;code&gt;312&lt;/code&gt; 且至多 &lt;code&gt;576&lt;/code&gt; 字节.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code
 +-----+
 | 255 |
 +-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Pad Option&lt;/code> 该选项主要用于字段填充.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Pad Option&lt;/code&gt; 该选项主要用于字段填充.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code
 +-----+
 | 0 |
 +-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Subnet Mask&lt;/code> 该选项用于指示客户端子网掩码, 其 &lt;code>Len&lt;/code> 为固定 4 字节(&lt;code>DHCPv4&lt;/code>), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 &lt;code>router option&lt;/code> 则 &lt;code>Subnet Mask&lt;/code> 应该位于前部.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len Subnet Mask
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Subnet Mask&lt;/code&gt; 该选项用于指示客户端子网掩码, 其 &lt;code&gt;Len&lt;/code&gt; 为固定 4 字节(&lt;code&gt;DHCPv4&lt;/code&gt;), 后续 4 字节为对应的子网掩码值. 同时如果服务端同时提供了 &lt;code&gt;router option&lt;/code&gt; 则 &lt;code&gt;Subnet Mask&lt;/code&gt; 应该位于前部.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len Subnet Mask
 +-----+-----+-----+-----+-----+-----+
 | 1 | 4 | m1 | m2 | m3 | m4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Router Option&lt;/code> 该选项主要用于列举当前网络可路由的 &lt;code>IP&lt;/code> 地址, 同时其 &lt;code>Len&lt;/code> 最少为 4 且永远为 4 的倍数.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len Address 1 Address 2
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Router Option&lt;/code&gt; 该选项主要用于列举当前网络可路由的 &lt;code&gt;IP&lt;/code&gt; 地址, 同时其 &lt;code&gt;Len&lt;/code&gt; 最少为 4 且永远为 4 的倍数.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len Address 1 Address 2
 +-----+-----+-----+-----+-----+-----+-----+-----+--
 | 3 | n | a1 | a2 | a3 | a4 | a1 | a2 | ...
 +-----+-----+-----+-----+-----+-----+-----+-----+--
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;li>
-&lt;p>&lt;code>Renewal (T1) Time Value&lt;/code> 该选项主要用于指示从客户端获取 &lt;code>IP&lt;/code> 地址到续期该 &lt;code>IP&lt;/code> 所需间隔时间. &lt;code>T1 Interval&lt;/code> 为 4 字节 32 位整数, 单位为 &lt;code>秒&lt;/code>.&lt;/p>
-&lt;pre tabindex="0">&lt;code> Code Len T1 Interval
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;Renewal (T1) Time Value&lt;/code&gt; 该选项主要用于指示从客户端获取 &lt;code&gt;IP&lt;/code&gt; 地址到续期该 &lt;code&gt;IP&lt;/code&gt; 所需间隔时间. &lt;code&gt;T1 Interval&lt;/code&gt; 为 4 字节 32 位整数, 单位为 &lt;code&gt;秒&lt;/code&gt;.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; Code Len T1 Interval
 +-----+-----+-----+-----+-----+-----+
 | 58 | 4 | t1 | t2 | t3 | t4 |
 +-----+-----+-----+-----+-----+-----+
-&lt;/code>&lt;/pre>&lt;/li>
-&lt;/ol>
-&lt;h1 id="ref">REF&lt;/h1>
-&lt;ol>
-&lt;li>&lt;a href="https://datatracker.ietf.org/doc/html/rfc2131">RFC 2131 - Dynamic Host Configuration Protocol&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://datatracker.ietf.org/doc/html/rfc2132">RFC 2132 - DHCP Options and BOOTP Vendor Extensions&lt;/a>&lt;/li>
-&lt;/ol></content></item></channel></rss>
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id="ref"&gt;REF&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://datatracker.ietf.org/doc/html/rfc2131"&gt;RFC 2131 - Dynamic Host Configuration Protocol&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://datatracker.ietf.org/doc/html/rfc2132"&gt;RFC 2132 - DHCP Options and BOOTP Vendor Extensions&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;</content></item></channel></rss>

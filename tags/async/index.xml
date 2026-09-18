@@ -1,26 +1,26 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>async on 铜山西崩</title><link>https://blog.liloew.in/tags/async/</link><description>Recent content in async on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><lastBuildDate>Fri, 03 Nov 2023 21:03:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/async/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
-&lt;h2 id="环境准备">环境准备&lt;/h2>
-&lt;p>首先需要安装 &lt;code>Rust&lt;/code>, 目前 &lt;code>Rust&lt;/code> 官方主要提供 &lt;code>Rustup&lt;/code> 这一工具管理 &lt;code>Rust&lt;/code> 各版本. 如果是 &lt;code>Windows&lt;/code> 可直接下载 &lt;code>Rustup-init.exe&lt;/code> 运行即可, 如果是 &lt;code>Linux&lt;/code> 或 &lt;code>macOS&lt;/code> 则可在 &lt;code>Shell&lt;/code> 中运行一下命令快速安装:&lt;/p>
-&lt;pre tabindex="0">&lt;code>curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
-&lt;/code>&lt;/pre>&lt;p>&lt;code>Rustup&lt;/code> 在安装 &lt;code>Rust&lt;/code> 同时也会同时安装 &lt;code>Cargo&lt;/code> 这一构建和包管理工具, 相对于 &lt;code>C/C++&lt;/code> 而言极大地减轻依赖和构建管理的心智负担.&lt;/p>
-&lt;p>在安装完 &lt;code>Rust&lt;/code> 和 &lt;code>Cargo&lt;/code> 后由于涉及到网络报文, 因此还建议安装 &lt;code>Wireshark&lt;/code>(&lt;code>Linux&lt;/code> 环境下使用 &lt;code>tcpdump&lt;/code> 亦可)以便后续对报文进行分析.&lt;/p>
-&lt;p>&lt;code>IDE&lt;/code> 可以选择 &lt;code>VS Code&lt;/code> 或 &lt;code>JetBrains&lt;/code> 新发布的 &lt;code>RustRover&lt;/code>, 如果选择 &lt;code>VS Code&lt;/code> 的话为了进行调试还需同时安装 &lt;code>CodeLLDB&lt;/code> 插件.&lt;/p></description><content>&lt;p>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">前一篇文章&lt;/a>介绍了 &lt;code>DHCP&lt;/code> 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code>Rust&lt;/code> 从头实现一个 &lt;code>DHCP&lt;/code> 协议客户端.&lt;/p>
-&lt;h2 id="环境准备">环境准备&lt;/h2>
-&lt;p>首先需要安装 &lt;code>Rust&lt;/code>, 目前 &lt;code>Rust&lt;/code> 官方主要提供 &lt;code>Rustup&lt;/code> 这一工具管理 &lt;code>Rust&lt;/code> 各版本. 如果是 &lt;code>Windows&lt;/code> 可直接下载 &lt;code>Rustup-init.exe&lt;/code> 运行即可, 如果是 &lt;code>Linux&lt;/code> 或 &lt;code>macOS&lt;/code> 则可在 &lt;code>Shell&lt;/code> 中运行一下命令快速安装:&lt;/p>
-&lt;pre tabindex="0">&lt;code>curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
-&lt;/code>&lt;/pre>&lt;p>&lt;code>Rustup&lt;/code> 在安装 &lt;code>Rust&lt;/code> 同时也会同时安装 &lt;code>Cargo&lt;/code> 这一构建和包管理工具, 相对于 &lt;code>C/C++&lt;/code> 而言极大地减轻依赖和构建管理的心智负担.&lt;/p>
-&lt;p>在安装完 &lt;code>Rust&lt;/code> 和 &lt;code>Cargo&lt;/code> 后由于涉及到网络报文, 因此还建议安装 &lt;code>Wireshark&lt;/code>(&lt;code>Linux&lt;/code> 环境下使用 &lt;code>tcpdump&lt;/code> 亦可)以便后续对报文进行分析.&lt;/p>
-&lt;p>&lt;code>IDE&lt;/code> 可以选择 &lt;code>VS Code&lt;/code> 或 &lt;code>JetBrains&lt;/code> 新发布的 &lt;code>RustRover&lt;/code>, 如果选择 &lt;code>VS Code&lt;/code> 的话为了进行调试还需同时安装 &lt;code>CodeLLDB&lt;/code> 插件.&lt;/p>
-&lt;h2 id="开发">开发&lt;/h2>
-&lt;p>我们首先通过 &lt;code>cargo new inode-rs&lt;/code> 新建一个项目, 其中 &lt;code>inode-rs&lt;/code> 是项目名称. 为便于项目管理 &lt;code>Cargo&lt;/code> 为我们提供了 &lt;code>workspace&lt;/code> 的概念, 此处我们在 &lt;code>inode-rs&lt;/code> 下新建 &lt;code>packet&lt;/code> 和 &lt;code>cli&lt;/code> 两个子项目. 此时项目结构看起来像这样:&lt;/p>
-&lt;pre tabindex="0">&lt;code>.
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Async on 铜山西崩</title><link>https://blog.liloew.in/tags/async/</link><description>Recent content in Async on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><language>cn</language><lastBuildDate>Fri, 03 Nov 2023 21:03:41 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/tags/async/index.xml" rel="self" type="application/rss+xml"/><item><title>DHCP 协议分析及实现 - Ⅱ</title><link>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</link><pubDate>Fri, 03 Nov 2023 21:03:41 +0800</pubDate><guid>https://blog.liloew.in/posts/rust-implementation-dhcp-2/</guid><description>&lt;p&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;前一篇文章&lt;/a&gt;介绍了 &lt;code&gt;DHCP&lt;/code&gt; 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code&gt;Rust&lt;/code&gt; 从头实现一个 &lt;code&gt;DHCP&lt;/code&gt; 协议客户端.&lt;/p&gt;
+&lt;h2 id="环境准备"&gt;环境准备&lt;/h2&gt;
+&lt;p&gt;首先需要安装 &lt;code&gt;Rust&lt;/code&gt;, 目前 &lt;code&gt;Rust&lt;/code&gt; 官方主要提供 &lt;code&gt;Rustup&lt;/code&gt; 这一工具管理 &lt;code&gt;Rust&lt;/code&gt; 各版本. 如果是 &lt;code&gt;Windows&lt;/code&gt; 可直接下载 &lt;code&gt;Rustup-init.exe&lt;/code&gt; 运行即可, 如果是 &lt;code&gt;Linux&lt;/code&gt; 或 &lt;code&gt;macOS&lt;/code&gt; 则可在 &lt;code&gt;Shell&lt;/code&gt; 中运行一下命令快速安装:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;Rustup&lt;/code&gt; 在安装 &lt;code&gt;Rust&lt;/code&gt; 同时也会同时安装 &lt;code&gt;Cargo&lt;/code&gt; 这一构建和包管理工具, 相对于 &lt;code&gt;C/C++&lt;/code&gt; 而言极大地减轻依赖和构建管理的心智负担.&lt;/p&gt;
+&lt;p&gt;在安装完 &lt;code&gt;Rust&lt;/code&gt; 和 &lt;code&gt;Cargo&lt;/code&gt; 后由于涉及到网络报文, 因此还建议安装 &lt;code&gt;Wireshark&lt;/code&gt;(&lt;code&gt;Linux&lt;/code&gt; 环境下使用 &lt;code&gt;tcpdump&lt;/code&gt; 亦可)以便后续对报文进行分析.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;IDE&lt;/code&gt; 可以选择 &lt;code&gt;VS Code&lt;/code&gt; 或 &lt;code&gt;JetBrains&lt;/code&gt; 新发布的 &lt;code&gt;RustRover&lt;/code&gt;, 如果选择 &lt;code&gt;VS Code&lt;/code&gt; 的话为了进行调试还需同时安装 &lt;code&gt;CodeLLDB&lt;/code&gt; 插件.&lt;/p&gt;</description><content>&lt;p&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;前一篇文章&lt;/a&gt;介绍了 &lt;code&gt;DHCP&lt;/code&gt; 协议定义以及相关信令之间的流转, 本文主要通过 &lt;code&gt;Rust&lt;/code&gt; 从头实现一个 &lt;code&gt;DHCP&lt;/code&gt; 协议客户端.&lt;/p&gt;
+&lt;h2 id="环境准备"&gt;环境准备&lt;/h2&gt;
+&lt;p&gt;首先需要安装 &lt;code&gt;Rust&lt;/code&gt;, 目前 &lt;code&gt;Rust&lt;/code&gt; 官方主要提供 &lt;code&gt;Rustup&lt;/code&gt; 这一工具管理 &lt;code&gt;Rust&lt;/code&gt; 各版本. 如果是 &lt;code&gt;Windows&lt;/code&gt; 可直接下载 &lt;code&gt;Rustup-init.exe&lt;/code&gt; 运行即可, 如果是 &lt;code&gt;Linux&lt;/code&gt; 或 &lt;code&gt;macOS&lt;/code&gt; 则可在 &lt;code&gt;Shell&lt;/code&gt; 中运行一下命令快速安装:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;curl --proto &amp;#39;=https&amp;#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;code&gt;Rustup&lt;/code&gt; 在安装 &lt;code&gt;Rust&lt;/code&gt; 同时也会同时安装 &lt;code&gt;Cargo&lt;/code&gt; 这一构建和包管理工具, 相对于 &lt;code&gt;C/C++&lt;/code&gt; 而言极大地减轻依赖和构建管理的心智负担.&lt;/p&gt;
+&lt;p&gt;在安装完 &lt;code&gt;Rust&lt;/code&gt; 和 &lt;code&gt;Cargo&lt;/code&gt; 后由于涉及到网络报文, 因此还建议安装 &lt;code&gt;Wireshark&lt;/code&gt;(&lt;code&gt;Linux&lt;/code&gt; 环境下使用 &lt;code&gt;tcpdump&lt;/code&gt; 亦可)以便后续对报文进行分析.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;IDE&lt;/code&gt; 可以选择 &lt;code&gt;VS Code&lt;/code&gt; 或 &lt;code&gt;JetBrains&lt;/code&gt; 新发布的 &lt;code&gt;RustRover&lt;/code&gt;, 如果选择 &lt;code&gt;VS Code&lt;/code&gt; 的话为了进行调试还需同时安装 &lt;code&gt;CodeLLDB&lt;/code&gt; 插件.&lt;/p&gt;
+&lt;h2 id="开发"&gt;开发&lt;/h2&gt;
+&lt;p&gt;我们首先通过 &lt;code&gt;cargo new inode-rs&lt;/code&gt; 新建一个项目, 其中 &lt;code&gt;inode-rs&lt;/code&gt; 是项目名称. 为便于项目管理 &lt;code&gt;Cargo&lt;/code&gt; 为我们提供了 &lt;code&gt;workspace&lt;/code&gt; 的概念, 此处我们在 &lt;code&gt;inode-rs&lt;/code&gt; 下新建 &lt;code&gt;packet&lt;/code&gt; 和 &lt;code&gt;cli&lt;/code&gt; 两个子项目. 此时项目结构看起来像这样:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;.
 ├── Cargo.toml
 ├── cli
 └── packet
-&lt;/code>&lt;/pre>&lt;p>为了后续开发我们还需要至少添加 &lt;code>bytes&lt;/code>, &lt;code>pnet&lt;/code> 和 &lt;code>tokio&lt;/code> 依赖. 其中 &lt;code>bytes&lt;/code> 主要用于二进制报文的读写, &lt;code>pnet&lt;/code> 可用于获取本机网卡信息, &lt;code>tokio&lt;/code> 是一个异步运行时库, 我们使用其提供的 &lt;code>async/await&lt;/code> 运行环境简化异步和多线程操作.&lt;/p>
-&lt;p>我们在 &lt;code>packet&lt;/code> 子项目下依次定义子 &lt;code>mod&lt;/code> 为 &lt;code>udp&lt;/code> 并在 &lt;code>udp&lt;/code> 模块下定义 &lt;code>dhcp&lt;/code> 模块, 最终文件结构为 &lt;code>packet/udp/dhcp.rs&lt;/code>. 在 &lt;code>dhcp.rs&lt;/code> 内定义具体的数据结构.&lt;/p>
-&lt;p>依据 &lt;code>RFC 2132&lt;/code> 中关于 &lt;code>options&lt;/code> 章节我们首先定义一个 &lt;code>DHCP Message Type&lt;/code> 消息类型的枚举:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone, Copy)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;为了后续开发我们还需要至少添加 &lt;code&gt;bytes&lt;/code&gt;, &lt;code&gt;pnet&lt;/code&gt; 和 &lt;code&gt;tokio&lt;/code&gt; 依赖. 其中 &lt;code&gt;bytes&lt;/code&gt; 主要用于二进制报文的读写, &lt;code&gt;pnet&lt;/code&gt; 可用于获取本机网卡信息, &lt;code&gt;tokio&lt;/code&gt; 是一个异步运行时库, 我们使用其提供的 &lt;code&gt;async/await&lt;/code&gt; 运行环境简化异步和多线程操作.&lt;/p&gt;
+&lt;p&gt;我们在 &lt;code&gt;packet&lt;/code&gt; 子项目下依次定义子 &lt;code&gt;mod&lt;/code&gt; 为 &lt;code&gt;udp&lt;/code&gt; 并在 &lt;code&gt;udp&lt;/code&gt; 模块下定义 &lt;code&gt;dhcp&lt;/code&gt; 模块, 最终文件结构为 &lt;code&gt;packet/udp/dhcp.rs&lt;/code&gt;. 在 &lt;code&gt;dhcp.rs&lt;/code&gt; 内定义具体的数据结构.&lt;/p&gt;
+&lt;p&gt;依据 &lt;code&gt;RFC 2132&lt;/code&gt; 中关于 &lt;code&gt;options&lt;/code&gt; 章节我们首先定义一个 &lt;code&gt;DHCP Message Type&lt;/code&gt; 消息类型的枚举:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone, Copy)]
 pub enum DHCPMessageType {
 DHCPDISCOVER = 0x01,
 DHCPOFFER = 0x02,
@@ -31,15 +31,15 @@ DHCPNAK = 0x06,
 DHCPRELEASE = 0x07,
 DHCPINFORM = 0x08,
 }
-&lt;/code>&lt;/pre>&lt;p>同样, 依据 &lt;code>RFC 2131&lt;/code> 中关于报文格式章节我们首先定义 &lt;code>op&lt;/code> 枚举:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone, Copy, Default)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;同样, 依据 &lt;code&gt;RFC 2131&lt;/code&gt; 中关于报文格式章节我们首先定义 &lt;code&gt;op&lt;/code&gt; 枚举:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone, Copy, Default)]
 pub enum DHCPOP {
 #[default]
 BOOTREQUEST = 0x01,
 BOOTREPLY = 0x02,
 }
-&lt;/code>&lt;/pre>&lt;p>此处 &lt;code>DHCPOP&lt;/code> 枚举由于在网络传输过程中需要序列化为 &lt;code>u8&lt;/code>, 在客户端接收到报文后再将对应的 &lt;code>u8&lt;/code> 数值反序列化为 &lt;code>DHCPOP&lt;/code> 枚举, 因此我们需要实现 &lt;code>Into&lt;/code> 和 &lt;code>From&lt;/code> 两个 &lt;code>Trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl Into&amp;lt;DHCPOP&amp;gt; for u8 {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;此处 &lt;code&gt;DHCPOP&lt;/code&gt; 枚举由于在网络传输过程中需要序列化为 &lt;code&gt;u8&lt;/code&gt;, 在客户端接收到报文后再将对应的 &lt;code&gt;u8&lt;/code&gt; 数值反序列化为 &lt;code&gt;DHCPOP&lt;/code&gt; 枚举, 因此我们需要实现 &lt;code&gt;Into&lt;/code&gt; 和 &lt;code&gt;From&lt;/code&gt; 两个 &lt;code&gt;Trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl Into&amp;lt;DHCPOP&amp;gt; for u8 {
 fn into(self) -&amp;gt; DHCPOP {
 match self {
 0x01 =&amp;gt; DHCPOP::BOOTREQUEST,
@@ -53,10 +53,10 @@ fn from(value: DHCPOP) -&amp;gt; Self {
 value as u8
 }
 }
-&lt;/code>&lt;/pre>&lt;p>在实现 &lt;code>Into&lt;/code> &lt;code>Trait&lt;/code> 时我们使用了 &lt;code>match&lt;/code> &lt;code>模式匹配&lt;/code>. 当前 &lt;code>Rust&lt;/code> 要求针对 &lt;code>match&lt;/code> 模式匹配必须是 &lt;code>穷举&lt;/code> 的 - 即必须保护所有可能情况, 因此在对 &lt;code>u8&lt;/code> 进行匹配时由于我们只关注 &lt;code>0x01&lt;/code> 和 &lt;code>0x02&lt;/code> 两种场景, 针对其他情况统一使用 &lt;code>_&lt;/code> 进行匹配并返回一个默认的 &lt;code>DHCPOP::BOOTREQUEST&lt;/code>.&lt;/p>
-&lt;p>&lt;em>其他一些类似的枚举我们不在反复展示.&lt;/em>&lt;/p>
-&lt;p>在定义了必要的一些 &lt;code>enum&lt;/code> 后我们再定义一个 &lt;code>DHCPDiscover&lt;/code> 结构体:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[derive(Debug, Clone)]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在实现 &lt;code&gt;Into&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 时我们使用了 &lt;code&gt;match&lt;/code&gt; &lt;code&gt;模式匹配&lt;/code&gt;. 当前 &lt;code&gt;Rust&lt;/code&gt; 要求针对 &lt;code&gt;match&lt;/code&gt; 模式匹配必须是 &lt;code&gt;穷举&lt;/code&gt; 的 - 即必须保护所有可能情况, 因此在对 &lt;code&gt;u8&lt;/code&gt; 进行匹配时由于我们只关注 &lt;code&gt;0x01&lt;/code&gt; 和 &lt;code&gt;0x02&lt;/code&gt; 两种场景, 针对其他情况统一使用 &lt;code&gt;_&lt;/code&gt; 进行匹配并返回一个默认的 &lt;code&gt;DHCPOP::BOOTREQUEST&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;其他一些类似的枚举我们不在反复展示.&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;在定义了必要的一些 &lt;code&gt;enum&lt;/code&gt; 后我们再定义一个 &lt;code&gt;DHCPDiscover&lt;/code&gt; 结构体:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[derive(Debug, Clone)]
 pub struct DHCPDiscover {
 pub op: DHCPOP,
 pub htype: DHCPHType,
@@ -74,8 +74,8 @@ pub sname: [u8; 64],
 pub file: [u8; 128],
 pub options: Vec&amp;lt;u8&amp;gt;,
 }
-&lt;/code>&lt;/pre>&lt;p>同时为 &lt;code>DHCPDiscover&lt;/code> 实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl Default for DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;同时为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl Default for DHCPDiscover {
 fn default() -&amp;gt; Self {
 DHCPDiscover {
 op: DHCPOP::BOOTREQUEST,
@@ -96,9 +96,9 @@ options: vec![99, 130, 83, 99],
 }
 }
 }
-&lt;/code>&lt;/pre>&lt;p>在为 &lt;code>DHCPDiscover&lt;/code> 实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code> 时我们为字段 &lt;code>options&lt;/code> 预先存入了 &lt;code>magic cookie&lt;/code> 即 &lt;code>[99, 130, 83, 99]&lt;/code>(&lt;code>10&lt;/code> 进制表示).&lt;/p>
-&lt;p>除了实现 &lt;code>Default&lt;/code> &lt;code>Trait&lt;/code> 我们同时还定义一个 &lt;code>fn with_mac(mac: &amp;amp;str)&lt;/code> 的关联函数, 其作用是根据 &lt;code>MAC&lt;/code> 地址初始化 &lt;code>DHCPDiscover&lt;/code> 对象; 同时为了支持动态设置 &lt;code>options&lt;/code> 字段, 我们为 &lt;code>DHCPDiscover&lt;/code> 添加一个 &lt;code>fn insert_options(&amp;amp;mut self, options: Vec&amp;lt;DHCPOPTIONS&amp;gt;)&lt;/code> 方法, 该方法关联到 &lt;code>DHCPDiscover&lt;/code> 的实例并可变(&lt;code>mut&lt;/code>)借用其实例自身以更新相关属性:&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;在为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 时我们为字段 &lt;code&gt;options&lt;/code&gt; 预先存入了 &lt;code&gt;magic cookie&lt;/code&gt; 即 &lt;code&gt;[99, 130, 83, 99]&lt;/code&gt;(&lt;code&gt;10&lt;/code&gt; 进制表示).&lt;/p&gt;
+&lt;p&gt;除了实现 &lt;code&gt;Default&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 我们同时还定义一个 &lt;code&gt;fn with_mac(mac: &amp;amp;str)&lt;/code&gt; 的关联函数, 其作用是根据 &lt;code&gt;MAC&lt;/code&gt; 地址初始化 &lt;code&gt;DHCPDiscover&lt;/code&gt; 对象; 同时为了支持动态设置 &lt;code&gt;options&lt;/code&gt; 字段, 我们为 &lt;code&gt;DHCPDiscover&lt;/code&gt; 添加一个 &lt;code&gt;fn insert_options(&amp;amp;mut self, options: Vec&amp;lt;DHCPOPTIONS&amp;gt;)&lt;/code&gt; 方法, 该方法关联到 &lt;code&gt;DHCPDiscover&lt;/code&gt; 的实例并可变(&lt;code&gt;mut&lt;/code&gt;)借用其实例自身以更新相关属性:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl DHCPDiscover {
 pub fn with_mac(mac: &amp;amp;str) -&amp;gt; Self {
 let mut mac_addr: Vec&amp;lt;u8&amp;gt; = if mac.contains(&amp;#34;-&amp;#34;) {
 str::split(mac, &amp;#34;-&amp;#34;)
@@ -123,12 +123,12 @@ self.options.extend(ele.va.clone());
 self.options.push(0xff);
 }
 }
-&lt;/code>&lt;/pre>&lt;p>以上除了定义 &lt;code>enum&lt;/code> 和 &lt;code>struct&lt;/code> 外, 我们再定义一个 &lt;code>DHCPBytes&lt;/code> &lt;code>trait&lt;/code>:&lt;/p>
-&lt;pre tabindex="0">&lt;code>pub trait DHCPBytes {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以上除了定义 &lt;code&gt;enum&lt;/code&gt; 和 &lt;code&gt;struct&lt;/code&gt; 外, 我们再定义一个 &lt;code&gt;DHCPBytes&lt;/code&gt; &lt;code&gt;trait&lt;/code&gt;:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;pub trait DHCPBytes {
 fn to_bytes(&amp;amp;self) -&amp;gt; BytesMut;
 }
-&lt;/code>&lt;/pre>&lt;p>并要求所有实现该 &lt;code>trait&lt;/code> 的元素都必须实现 &lt;code>to_bytes&lt;/code> 方法以便将对应元素转换为二进制 &lt;code>bytes&lt;/code> 从而在 &lt;code>UDP&lt;/code> 报文中进行传输. 其中 &lt;code>BytesMut&lt;/code> 由 &lt;code>bytes&lt;/code> 这个 &lt;code>crate&lt;/code> 提供, 而 &lt;code>bytes&lt;/code> 库主要在于提供高效的针对字节缓冲的操作. &lt;code>Bytes&lt;/code> 作为一个高效的存储与操作连续内存空间的容器, 其设计的主要目标在于网络编码以及其他一些应用场景.&lt;/p>
-&lt;pre tabindex="0">&lt;code>impl DHCPBytes for DHCPDiscover {
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;并要求所有实现该 &lt;code&gt;trait&lt;/code&gt; 的元素都必须实现 &lt;code&gt;to_bytes&lt;/code&gt; 方法以便将对应元素转换为二进制 &lt;code&gt;bytes&lt;/code&gt; 从而在 &lt;code&gt;UDP&lt;/code&gt; 报文中进行传输. 其中 &lt;code&gt;BytesMut&lt;/code&gt; 由 &lt;code&gt;bytes&lt;/code&gt; 这个 &lt;code&gt;crate&lt;/code&gt; 提供, 而 &lt;code&gt;bytes&lt;/code&gt; 库主要在于提供高效的针对字节缓冲的操作. &lt;code&gt;Bytes&lt;/code&gt; 作为一个高效的存储与操作连续内存空间的容器, 其设计的主要目标在于网络编码以及其他一些应用场景.&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;impl DHCPBytes for DHCPDiscover {
 fn to_bytes(&amp;amp;self) -&amp;gt; BytesMut {
 let mut discover_bytes = BytesMut::new();
 discover_bytes.put_u8(self.op as u8);
@@ -157,9 +157,9 @@ discover_bytes.put_u8(*ele);
 discover_bytes
 }
 }
-&lt;/code>&lt;/pre>&lt;p>以上 &lt;code>DHCPDiscover&lt;/code> 实现的 &lt;code>DHCPBytes&lt;/code> 主要是按 &lt;code>RFC 2131&lt;/code> 内定义的报文格式将对应字段转换为 &lt;code>Bytes&lt;/code>. 另外像其中 &lt;code>xid&lt;/code>, &lt;code>secs&lt;/code> 和 &lt;code>ciaddr&lt;/code> 等字段由于在标准中分别采用 &lt;code>4&lt;/code>, &lt;code>2&lt;/code> 和 &lt;code>4&lt;/code> 字节, 分别对应了 &lt;code>32&lt;/code>, &lt;code>16&lt;/code> 和 &lt;code>32&lt;/code> &lt;code>BIT&lt;/code>, 因此为简化此处直接按对应 &lt;code>BIT&lt;/code> 定义了无符整型数据.&lt;/p>
-&lt;p>在完成以上相关 &lt;code>enum&lt;/code> 和 &lt;code>struct&lt;/code> 定义的最后我们继续来实现 &lt;code>main()&lt;/code> 方法:&lt;/p>
-&lt;pre tabindex="0">&lt;code>#[tokio::main]
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以上 &lt;code&gt;DHCPDiscover&lt;/code&gt; 实现的 &lt;code&gt;DHCPBytes&lt;/code&gt; 主要是按 &lt;code&gt;RFC 2131&lt;/code&gt; 内定义的报文格式将对应字段转换为 &lt;code&gt;Bytes&lt;/code&gt;. 另外像其中 &lt;code&gt;xid&lt;/code&gt;, &lt;code&gt;secs&lt;/code&gt; 和 &lt;code&gt;ciaddr&lt;/code&gt; 等字段由于在标准中分别采用 &lt;code&gt;4&lt;/code&gt;, &lt;code&gt;2&lt;/code&gt; 和 &lt;code&gt;4&lt;/code&gt; 字节, 分别对应了 &lt;code&gt;32&lt;/code&gt;, &lt;code&gt;16&lt;/code&gt; 和 &lt;code&gt;32&lt;/code&gt; &lt;code&gt;BIT&lt;/code&gt;, 因此为简化此处直接按对应 &lt;code&gt;BIT&lt;/code&gt; 定义了无符整型数据.&lt;/p&gt;
+&lt;p&gt;在完成以上相关 &lt;code&gt;enum&lt;/code&gt; 和 &lt;code&gt;struct&lt;/code&gt; 定义的最后我们继续来实现 &lt;code&gt;main()&lt;/code&gt; 方法:&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;#[tokio::main]
 async fn main() -&amp;gt; Result&amp;lt;()&amp;gt; {
 let socket = UdpSocket::bind(&amp;#34;0.0.0.0:68&amp;#34;).await?;
 let broadcast = socket.set_broadcast(true);
@@ -205,14 +205,14 @@ Err(e) =&amp;gt; println!(&amp;#34;错误: {:?}&amp;#34;, e),
 }
 Ok(())
 }
-&lt;/code>&lt;/pre>&lt;p>首先通过 &lt;code>UdpSocket::bind&amp;lt;A: ToSocketAddrs&amp;gt;(addr: A)&lt;/code> 函数绑定到本机对应端口, 值得注意的是此处在调用 &lt;code>bind&lt;/code> 函数时后跟了一个 &lt;code>await?&lt;/code> 关键字, 这里的 &lt;code>async/await&lt;/code> 是 &lt;code>Rust&lt;/code> 提供的一个内置使得编写异步代码像同步代码一样的工具, &lt;code>async&lt;/code> 会将相应的代码块转换为一种实现了 &lt;code>Future&lt;/code> &lt;code>Trait&lt;/code> 的状态机, 当调用 &lt;code>await&lt;/code> 时具体的 &lt;code>Runtime&lt;/code> 会挂起当前运行环境直至其返回结果 &lt;code>Future&lt;/code> 准备好. &lt;code>Rust&lt;/code> 并未在标准中提供 &lt;code>async/await&lt;/code> 运行时, 因此我们需要通过 &lt;code>crate&lt;/code> 添加对应依赖, 在此处我们使用 &lt;code>tokio&lt;/code>.&lt;/p>
-&lt;p>以上我们同时还通过 &lt;code>socket.set_broadcast(true)&lt;/code> 显示地将 &lt;code>UDPSocket&lt;/code> 实例设置为广播模式, 在前一篇文章(&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">DHCP 协议分析及实现 - Ⅰ&lt;/a>)内我们也曾介绍过由于在 &lt;code>DHCP&lt;/code> 协议通信之初 &lt;code>客户端&lt;/code> 尚无具体 &lt;code>IP&lt;/code> 地址切也不知道对应 &lt;code>服务端&lt;/code> 所在网络中位置, 而这这好利用 &lt;code>UDP&lt;/code> 的广播特性使得客户端向局域网广播 &lt;code>DHCPDISCOVER&lt;/code> 报文. 对应地通过向 &lt;code>255.255.255.255:67&lt;/code> 发送广播报文.&lt;/p>
-&lt;p>至此我们完成了初步的 &lt;code>DHCP&lt;/code> 协议中 &lt;code>DHCPDISCOVER&lt;/code> 协议的转换与广播, 后续还有包括 &lt;code>DHCPOFFER&lt;/code>, &lt;code>DHCPREQUEST&lt;/code> 和 &lt;code>DHCPACK&lt;/code> 等消息的转换, 发送与解析我们不再赘述, 感兴趣的可以参考 &lt;a href="https://github.com/liloew/inode-rs">liloew/inode-rs&lt;/a> 完整实现.&lt;/p>
-&lt;h2 id="ref">REF&lt;/h2>
-&lt;ol>
-&lt;li>&lt;a href="https://www.rust-lang.org/">Rust Programming Language&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://tokio.rs/">Tokio - An asynchronous Rust runtime&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://github.com/tokio-rs/bytes">tokio-rs/bytes&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://github.com/liloew/inode-rs">liloew/inode-rs&lt;/a>&lt;/li>
-&lt;li>&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/">DHCP 协议分析及实现 - Ⅰ&lt;/a>&lt;/li>
-&lt;/ol></content></item></channel></rss>
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;首先通过 &lt;code&gt;UdpSocket::bind&amp;lt;A: ToSocketAddrs&amp;gt;(addr: A)&lt;/code&gt; 函数绑定到本机对应端口, 值得注意的是此处在调用 &lt;code&gt;bind&lt;/code&gt; 函数时后跟了一个 &lt;code&gt;await?&lt;/code&gt; 关键字, 这里的 &lt;code&gt;async/await&lt;/code&gt; 是 &lt;code&gt;Rust&lt;/code&gt; 提供的一个内置使得编写异步代码像同步代码一样的工具, &lt;code&gt;async&lt;/code&gt; 会将相应的代码块转换为一种实现了 &lt;code&gt;Future&lt;/code&gt; &lt;code&gt;Trait&lt;/code&gt; 的状态机, 当调用 &lt;code&gt;await&lt;/code&gt; 时具体的 &lt;code&gt;Runtime&lt;/code&gt; 会挂起当前运行环境直至其返回结果 &lt;code&gt;Future&lt;/code&gt; 准备好. &lt;code&gt;Rust&lt;/code&gt; 并未在标准中提供 &lt;code&gt;async/await&lt;/code&gt; 运行时, 因此我们需要通过 &lt;code&gt;crate&lt;/code&gt; 添加对应依赖, 在此处我们使用 &lt;code&gt;tokio&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;以上我们同时还通过 &lt;code&gt;socket.set_broadcast(true)&lt;/code&gt; 显示地将 &lt;code&gt;UDPSocket&lt;/code&gt; 实例设置为广播模式, 在前一篇文章(&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;DHCP 协议分析及实现 - Ⅰ&lt;/a&gt;)内我们也曾介绍过由于在 &lt;code&gt;DHCP&lt;/code&gt; 协议通信之初 &lt;code&gt;客户端&lt;/code&gt; 尚无具体 &lt;code&gt;IP&lt;/code&gt; 地址切也不知道对应 &lt;code&gt;服务端&lt;/code&gt; 所在网络中位置, 而这这好利用 &lt;code&gt;UDP&lt;/code&gt; 的广播特性使得客户端向局域网广播 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 报文. 对应地通过向 &lt;code&gt;255.255.255.255:67&lt;/code&gt; 发送广播报文.&lt;/p&gt;
+&lt;p&gt;至此我们完成了初步的 &lt;code&gt;DHCP&lt;/code&gt; 协议中 &lt;code&gt;DHCPDISCOVER&lt;/code&gt; 协议的转换与广播, 后续还有包括 &lt;code&gt;DHCPOFFER&lt;/code&gt;, &lt;code&gt;DHCPREQUEST&lt;/code&gt; 和 &lt;code&gt;DHCPACK&lt;/code&gt; 等消息的转换, 发送与解析我们不再赘述, 感兴趣的可以参考 &lt;a href="https://github.com/liloew/inode-rs"&gt;liloew/inode-rs&lt;/a&gt; 完整实现.&lt;/p&gt;
+&lt;h2 id="ref"&gt;REF&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.rust-lang.org/"&gt;Rust Programming Language&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://tokio.rs/"&gt;Tokio - An asynchronous Rust runtime&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/tokio-rs/bytes"&gt;tokio-rs/bytes&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/liloew/inode-rs"&gt;liloew/inode-rs&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://blog.liloew.in/posts/rust-implementation-dhcp-1/"&gt;DHCP 协议分析及实现 - Ⅰ&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;</content></item></channel></rss>
