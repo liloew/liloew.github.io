@@ -1,0 +1,48 @@
+<!doctype html><html lang=cn><head><title>S3 :: 铜山西崩</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content><meta name=keywords content><meta name=robots content="noodp"><link rel=canonical href=https://blog.liloew.in/tags/s3/><link rel=stylesheet href=https://blog.liloew.in/styles.css><link rel="shortcut icon" href=https://blog.liloew.in/img/theme-colors/green.png><link rel=apple-touch-icon href=https://blog.liloew.in/img/theme-colors/green.png><meta name=twitter:card content="summary"><meta name=twitter:site content><meta name=twitter:creator content><meta property="og:locale" content="cn"><meta property="og:type" content="website"><meta property="og:title" content="S3"><meta property="og:description" content><meta property="og:url" content="https://blog.liloew.in/tags/s3/"><meta property="og:site_name" content="铜山西崩"><meta property="og:image" content="https://blog.liloew.in/img/favicon/green.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627"><link href=/tags/s3/index.xml rel=alternate type=application/rss+xml title=铜山西崩><meta name=google-site-verification content="o7XjncKCMp0WON8AzwzxbzEUpfS9BiR6I94Hao6szK0"></head><body class=green><div class="container center headings--one-size"><header class=header><div class=header__inner><div class=header__logo><a href=/><div class=logo>Terminal</div></a></div><ul class="menu menu--mobile"><li class=menu__trigger>Menu&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=/books>书</a></li><li><a href=/about>关于</a></li><hr><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul><ul class="menu menu--desktop menu--language-selector"><li class=menu__trigger>简中&nbsp;▾</li><li><ul class=menu__dropdown><li><a href=https://blog.liloew.in/>简中</a></li><li><a href=https://blog.liloew.in/en/>English</a></li></ul></li></ul></div><nav class=navigation-menu><ul class="navigation-menu__inner menu--desktop"><li><a href=/books>书</a></li><li><a href=/about>关于</a></li></ul></nav></header><div class=content><h1>Posts for: #S3</h1><div class=posts><article class="post on-list"><h1 class=post-title><a href=https://blog.liloew.in/posts/apache-pekko-connectors-s3-with-huawei-obs/>修复 Apache Pekko Connectors S3 与华为云存储 OBS 兼容性问题</a></h1><div class=post-meta><time class=post-date>2026-10-03</time></div><span class=post-tags>#<a href=https://blog.liloew.in/tags/akka/>Akka</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/pekko/>Pekko</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/s3/>S3</a>&nbsp;
+#<a href=https://blog.liloew.in/tags/huawei-obs/>Huawei OBS</a>&nbsp;</span><div class=post-content><h2 id=背景>背景</h2><p>在软件开发领域文件访问是绕不开的内容，无论是从最早的 <code>FTP</code>，还是到后来的 <code>SFTP</code>、<code>WebDAV</code>，乃至现在占据主流的 <code>S3</code> 兼容协议，文件存取一直在向着访问安全、接入简易和弹性扩展的方向演进。因此越来越多的云厂商或开源项目锚定 <code>S3</code> 协议不断开发各种衍生产品。</p><p>正好之前项目中涉及文件存取相关的需求，在适配和开发过程中遇到一些问题记录在此处。目前问题已经提交回官方并经过了一轮 <code>Review</code>，目前是待合并状态。</p><h2 id=第一次封装>第一次封装</h2><p>首先，我们定义一个 <code>IStorageService</code> 接口，并为该接口提供多个实现类，在实际使用时则通过配置项动态决定使用何种实现。基于演示的目的实际代码做了简化。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none><code class=language-java data-lang=java><span style=display:flex><span><span style=color:#66d9ef>public</span> <span style=color:#66d9ef>interface</span> <span style=color:#a6e22e>IStorageService</span> {
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    Vendor <span style=color:#a6e22e>getVendor</span>();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    InputStream <span style=color:#a6e22e>downloadFile</span>(String path);
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>考虑到可能接入的兼容 <code>S3</code> 实现我们选取了 <code>AWS S3</code>，<code>MinIO</code> 和 <code>Huawei OBS</code>，接下来以标准的 <code>AWS S3</code> 为例。</p><pre tabindex=0><code>
+@Slf4j
+@Service
+@ConditionalOnProperty(prefix = &#34;file&#34;, value = &#34;vendor&#34;, havingValue = &#34;aws&#34;, matchIfMissing = false)
+public class AWSStorageServiceImpl implements IStorageService {
+
+    private final FileProperties properties;
+    private final S3Client s3Client;
+
+    public AWSStorageServiceImpl(FileProperties properties) {
+        this.properties = properties;
+        this.s3Client = S3Client.builder()
+                .region(Region.of(properties.getRegion()))
+                .credentialsProvider(() -&gt; AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()))
+                .build();
+    }
+
+    @Override
+    public Vendor getVendor() {
+        return Vendor.AWS;
+    }
+
+    @Override
+    public InputStream downloadFile(String path) {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(defaultBucket())
+                    .key(path)
+                    .build();
+            ResponseInputStream&lt;GetObjectResponse&gt; response = s3Client.getObject(getObjectRequest);
+            return response;
+        } catch (Exception e) {
+            log.error(&#34;Download file error - AWS - path: {} Exception: &#34;, path, e);
+        }
+        return null;
+    }
+}
+</code></pre><p>这里我们只实现了一个 <code>downloadFile</code>，在实际使用时至少还需要提供 <strong>文件上传</strong>，<strong>获取元数据</strong>，<strong>创建桶</strong> 和 <strong>查看桶内文件列表</strong> 等功能。至少目前下载文件的功能看起来工作的不错，同时 <strong>单接口多实现</strong> 也充分考虑到了可能会对接多种 <code>S3</code> 兼容实现的场景。</p></div><div><a class="read-more button" href=/posts/apache-pekko-connectors-s3-with-huawei-obs/>→</a></div></article><div class=pagination><div class=pagination__buttons></div></div></div></div><footer class=footer><div class=footer__inner><div class=copyright><span>© 2026 Powered by <a href=https://gohugo.io>Hugo</a></span>
+<span>:: <a href=https://github.com/panr/hugo-theme-terminal target=_blank>Theme</a> made by <a href=https://github.com/panr target=_blank>panr</a></span></div></div></footer><script type=text/javascript src=/bundle.min.js></script><script defer src=https://static.cloudflareinsights.com/beacon.min.js data-cf-beacon='{"token": "830a0d98b04b48168572244940312993"}'></script><script type=text/javascript>var sc_project=12967808,sc_invisible=1,sc_security="a1111881"</script><script type=text/javascript src=https://www.statcounter.com/counter/counter.js async></script><noscript><div class=statcounter><a title="Web Analytics" href=https://statcounter.com/ target=_blank><img class=statcounter src=https://c.statcounter.com/12967808/0/a1111881/1/ alt="Web Analytics" referrerpolicy=no-referrer-when-downgrade></a></div></noscript></div></body></html>

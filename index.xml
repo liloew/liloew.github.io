@@ -1,4 +1,301 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>铜山西崩</title><link>https://blog.liloew.in/</link><description>Recent content on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><language>cn</language><lastBuildDate>Sat, 12 Sep 2026 14:03:52 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>构建健壮系统</title><link>https://blog.liloew.in/posts/build-robust-system/</link><pubDate>Sat, 12 Sep 2026 14:03:52 +0800</pubDate><guid>https://blog.liloew.in/posts/build-robust-system/</guid><description>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>铜山西崩</title><link>https://blog.liloew.in/</link><description>Recent content on 铜山西崩</description><generator>Hugo -- gohugo.io</generator><language>cn</language><lastBuildDate>Sat, 03 Oct 2026 11:57:17 +0800</lastBuildDate><atom:link href="https://blog.liloew.in/index.xml" rel="self" type="application/rss+xml"/><item><title>修复 Apache Pekko Connectors S3 与华为云存储 OBS 兼容性问题</title><link>https://blog.liloew.in/posts/apache-pekko-connectors-s3-with-huawei-obs/</link><pubDate>Sat, 03 Oct 2026 11:57:17 +0800</pubDate><guid>https://blog.liloew.in/posts/apache-pekko-connectors-s3-with-huawei-obs/</guid><description>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
+&lt;p&gt;在软件开发领域文件访问是绕不开的内容，无论是从最早的 &lt;code&gt;FTP&lt;/code&gt;，还是到后来的 &lt;code&gt;SFTP&lt;/code&gt;、&lt;code&gt;WebDAV&lt;/code&gt;，乃至现在占据主流的 &lt;code&gt;S3&lt;/code&gt; 兼容协议，文件存取一直在向着访问安全、接入简易和弹性扩展的方向演进。因此越来越多的云厂商或开源项目锚定 &lt;code&gt;S3&lt;/code&gt; 协议不断开发各种衍生产品。&lt;/p&gt;
+&lt;p&gt;正好之前项目中涉及文件存取相关的需求，在适配和开发过程中遇到一些问题记录在此处。目前问题已经提交回官方并经过了一轮 &lt;code&gt;Review&lt;/code&gt;，目前是待合并状态。&lt;/p&gt;
+&lt;h2 id="第一次封装"&gt;第一次封装&lt;/h2&gt;
+&lt;p&gt;首先，我们定义一个 &lt;code&gt;IStorageService&lt;/code&gt; 接口，并为该接口提供多个实现类，在实际使用时则通过配置项动态决定使用何种实现。基于演示的目的实际代码做了简化。&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-java" data-lang="java"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;public&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;interface&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;IStorageService&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Vendor &lt;span style="color:#a6e22e"&gt;getVendor&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; InputStream &lt;span style="color:#a6e22e"&gt;downloadFile&lt;/span&gt;(String path);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;考虑到可能接入的兼容 &lt;code&gt;S3&lt;/code&gt; 实现我们选取了 &lt;code&gt;AWS S3&lt;/code&gt;，&lt;code&gt;MinIO&lt;/code&gt; 和 &lt;code&gt;Huawei OBS&lt;/code&gt;，接下来以标准的 &lt;code&gt;AWS S3&lt;/code&gt; 为例。&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;
+@Slf4j
+@Service
+@ConditionalOnProperty(prefix = &amp;#34;file&amp;#34;, value = &amp;#34;vendor&amp;#34;, havingValue = &amp;#34;aws&amp;#34;, matchIfMissing = false)
+public class AWSStorageServiceImpl implements IStorageService {
+private final FileProperties properties;
+private final S3Client s3Client;
+public AWSStorageServiceImpl(FileProperties properties) {
+this.properties = properties;
+this.s3Client = S3Client.builder()
+.region(Region.of(properties.getRegion()))
+.credentialsProvider(() -&amp;gt; AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()))
+.build();
+}
+@Override
+public Vendor getVendor() {
+return Vendor.AWS;
+}
+@Override
+public InputStream downloadFile(String path) {
+try {
+GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+.bucket(defaultBucket())
+.key(path)
+.build();
+ResponseInputStream&amp;lt;GetObjectResponse&amp;gt; response = s3Client.getObject(getObjectRequest);
+return response;
+} catch (Exception e) {
+log.error(&amp;#34;Download file error - AWS - path: {} Exception: &amp;#34;, path, e);
+}
+return null;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这里我们只实现了一个 &lt;code&gt;downloadFile&lt;/code&gt;，在实际使用时至少还需要提供 &lt;strong&gt;文件上传&lt;/strong&gt;，&lt;strong&gt;获取元数据&lt;/strong&gt;，&lt;strong&gt;创建桶&lt;/strong&gt; 和 &lt;strong&gt;查看桶内文件列表&lt;/strong&gt; 等功能。至少目前下载文件的功能看起来工作的不错，同时 &lt;strong&gt;单接口多实现&lt;/strong&gt; 也充分考虑到了可能会对接多种 &lt;code&gt;S3&lt;/code&gt; 兼容实现的场景。&lt;/p&gt;</description><content>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
+&lt;p&gt;在软件开发领域文件访问是绕不开的内容，无论是从最早的 &lt;code&gt;FTP&lt;/code&gt;，还是到后来的 &lt;code&gt;SFTP&lt;/code&gt;、&lt;code&gt;WebDAV&lt;/code&gt;，乃至现在占据主流的 &lt;code&gt;S3&lt;/code&gt; 兼容协议，文件存取一直在向着访问安全、接入简易和弹性扩展的方向演进。因此越来越多的云厂商或开源项目锚定 &lt;code&gt;S3&lt;/code&gt; 协议不断开发各种衍生产品。&lt;/p&gt;
+&lt;p&gt;正好之前项目中涉及文件存取相关的需求，在适配和开发过程中遇到一些问题记录在此处。目前问题已经提交回官方并经过了一轮 &lt;code&gt;Review&lt;/code&gt;，目前是待合并状态。&lt;/p&gt;
+&lt;h2 id="第一次封装"&gt;第一次封装&lt;/h2&gt;
+&lt;p&gt;首先，我们定义一个 &lt;code&gt;IStorageService&lt;/code&gt; 接口，并为该接口提供多个实现类，在实际使用时则通过配置项动态决定使用何种实现。基于演示的目的实际代码做了简化。&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-java" data-lang="java"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;public&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;interface&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;IStorageService&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; Vendor &lt;span style="color:#a6e22e"&gt;getVendor&lt;/span&gt;();
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; InputStream &lt;span style="color:#a6e22e"&gt;downloadFile&lt;/span&gt;(String path);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;考虑到可能接入的兼容 &lt;code&gt;S3&lt;/code&gt; 实现我们选取了 &lt;code&gt;AWS S3&lt;/code&gt;，&lt;code&gt;MinIO&lt;/code&gt; 和 &lt;code&gt;Huawei OBS&lt;/code&gt;，接下来以标准的 &lt;code&gt;AWS S3&lt;/code&gt; 为例。&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;
+@Slf4j
+@Service
+@ConditionalOnProperty(prefix = &amp;#34;file&amp;#34;, value = &amp;#34;vendor&amp;#34;, havingValue = &amp;#34;aws&amp;#34;, matchIfMissing = false)
+public class AWSStorageServiceImpl implements IStorageService {
+private final FileProperties properties;
+private final S3Client s3Client;
+public AWSStorageServiceImpl(FileProperties properties) {
+this.properties = properties;
+this.s3Client = S3Client.builder()
+.region(Region.of(properties.getRegion()))
+.credentialsProvider(() -&amp;gt; AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()))
+.build();
+}
+@Override
+public Vendor getVendor() {
+return Vendor.AWS;
+}
+@Override
+public InputStream downloadFile(String path) {
+try {
+GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+.bucket(defaultBucket())
+.key(path)
+.build();
+ResponseInputStream&amp;lt;GetObjectResponse&amp;gt; response = s3Client.getObject(getObjectRequest);
+return response;
+} catch (Exception e) {
+log.error(&amp;#34;Download file error - AWS - path: {} Exception: &amp;#34;, path, e);
+}
+return null;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这里我们只实现了一个 &lt;code&gt;downloadFile&lt;/code&gt;，在实际使用时至少还需要提供 &lt;strong&gt;文件上传&lt;/strong&gt;，&lt;strong&gt;获取元数据&lt;/strong&gt;，&lt;strong&gt;创建桶&lt;/strong&gt; 和 &lt;strong&gt;查看桶内文件列表&lt;/strong&gt; 等功能。至少目前下载文件的功能看起来工作的不错，同时 &lt;strong&gt;单接口多实现&lt;/strong&gt; 也充分考虑到了可能会对接多种 &lt;code&gt;S3&lt;/code&gt; 兼容实现的场景。&lt;/p&gt;
+&lt;h2 id="使用-pekko-connectors-s3-进行统一"&gt;使用 Pekko Connectors S3 进行统一&lt;/h2&gt;
+&lt;p&gt;第一版虽然针对不同存储厂商给出了不同实现可供选择，但作为实际项目需要同时维护多份实现基本相同的代码，使用时也需要运维人员根据实际情况进行配置，一定程度上提升了研发和运维成本。基于以上弊端我们使用 &lt;code&gt;apache pekko-connectors-s3&lt;/code&gt; 进行统一改造。&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-java" data-lang="java"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#a6e22e"&gt;@Slf4j&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#a6e22e"&gt;@Service&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#66d9ef"&gt;public&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;class&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;UNIStorageServiceImpl&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;implements&lt;/span&gt; IStorageService {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;private&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;final&lt;/span&gt; ActorSystem actorSystem;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;private&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;final&lt;/span&gt; FileProperties properties;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;private&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;final&lt;/span&gt; ObjectMapper objectMapper;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;public&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;UNIStorageServiceImpl&lt;/span&gt;(FileProperties properties, ActorSystem actorSystem, ObjectMapper objectMapper) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;this&lt;/span&gt;.&lt;span style="color:#a6e22e"&gt;properties&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; properties;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;this&lt;/span&gt;.&lt;span style="color:#a6e22e"&gt;actorSystem&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; actorSystem;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;this&lt;/span&gt;.&lt;span style="color:#a6e22e"&gt;objectMapper&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; objectMapper;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;@Override&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;public&lt;/span&gt; InputStream &lt;span style="color:#a6e22e"&gt;downloadFile&lt;/span&gt;(String path) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;try&lt;/span&gt; {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;final&lt;/span&gt; Source&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;ByteString, CompletionStage&lt;span style="color:#f92672"&gt;&amp;lt;&lt;/span&gt;ObjectMetadata&lt;span style="color:#f92672"&gt;&amp;gt;&amp;gt;&lt;/span&gt; source &lt;span style="color:#f92672"&gt;=&lt;/span&gt; S3.&lt;span style="color:#a6e22e"&gt;getObject&lt;/span&gt;(defaultBucket(), path);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; InputStream is &lt;span style="color:#f92672"&gt;=&lt;/span&gt; source.&lt;span style="color:#a6e22e"&gt;toMat&lt;/span&gt;(StreamConverters.&lt;span style="color:#a6e22e"&gt;asInputStream&lt;/span&gt;(Duration.&lt;span style="color:#a6e22e"&gt;ofSeconds&lt;/span&gt;(properties.&lt;span style="color:#a6e22e"&gt;getTimeout&lt;/span&gt;())), Keep.&lt;span style="color:#a6e22e"&gt;right&lt;/span&gt;())
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; .&lt;span style="color:#a6e22e"&gt;run&lt;/span&gt;(actorSystem);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; is;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; } &lt;span style="color:#66d9ef"&gt;catch&lt;/span&gt; (Exception e) {
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; log.&lt;span style="color:#a6e22e"&gt;error&lt;/span&gt;(&lt;span style="color:#e6db74"&gt;&amp;#34;Download file error - Pekko - path: {} Exception: &amp;#34;&lt;/span&gt;, path, e);
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;return&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;null&lt;/span&gt;;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; }
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;在切换到 &lt;code&gt;pekko-connectors-s3&lt;/code&gt; 后代码整体变得更加简洁，同时不再需要维护多份代码代码的可维护性更好了。&lt;/p&gt;
+&lt;h2 id="问题跟踪"&gt;问题跟踪&lt;/h2&gt;
+&lt;p&gt;在实际使用时发现下载 &lt;code&gt;Huawei OBS&lt;/code&gt; 中文件会出现 &lt;code&gt;403 Forbidden&lt;/code&gt; 错误但在使用 &lt;code&gt;MinIO&lt;/code&gt; 进行测试时并未遇到该问题：&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;java.util.concurrent.ExecutionException: org.apache.pekko.stream.connectors.s3.S3Exception: (Status code: 403 Forbidden, Code: 403 Forbidden, RequestId: -, Resource: -)
+at java.base/java.util.concurrent.CompletableFuture.wrapInExecutionException(CompletableFuture.java:345)
+at java.base/java.util.concurrent.CompletableFuture.reportGet(CompletableFuture.java:440)
+at java.base/java.util.concurrent.CompletableFuture.get(CompletableFuture.java:2117)
+at scala.concurrent.impl.FutureConvertersImpl$CF.super$get(FutureConvertersImpl.scala:89)
+at scala.concurrent.impl.FutureConvertersImpl$CF.$anonfun$get$2(FutureConvertersImpl.scala:89)
+at scala.concurrent.BlockContext$DefaultBlockContext$.blockOn(BlockContext.scala:62)
+at scala.concurrent.impl.FutureConvertersImpl$CF.get(FutureConvertersImpl.scala:89)
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;从日志中看不到更多有效信息，还好 &lt;code&gt;pekko-connectors-s3&lt;/code&gt; 提供了 &lt;code&gt;forward-proxy&lt;/code&gt; 配置以便我们通过代理观察请求和响应情况：&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt; # An address of a proxy that will be used for all connections using HTTP CONNECT tunnel.
+# forward-proxy {
+# scheme = &amp;#34;https&amp;#34;
+# host = &amp;#34;proxy&amp;#34;
+# port = 8080
+# credentials {
+# username = &amp;#34;username&amp;#34;
+# password = &amp;#34;password&amp;#34;
+# }
+#
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以下是下载文件时返回的错误：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-xml" data-lang="xml"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;Error&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;Code&amp;gt;&lt;/span&gt;SignatureDoesNotMatch&lt;span style="color:#f92672"&gt;&amp;lt;/Code&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;Message&amp;gt;&lt;/span&gt;The request signature we calculated does not match the signature you provided. Check your key and signing method.&lt;span style="color:#f92672"&gt;&amp;lt;/Message&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;RequestId&amp;gt;&lt;/span&gt;000001A0ECBCF74297E74C2F476D53FC&lt;span style="color:#f92672"&gt;&amp;lt;/RequestId&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;HostId&amp;gt;&lt;/span&gt;Z9v+cC1sRnaWw6x0vi8pxxYA0YVnKxbYHUPAFpnxkX8sLV44u5b02Z+ailn2wCnR&lt;span style="color:#f92672"&gt;&amp;lt;/HostId&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;AWSAccessKeyId&amp;gt;&lt;/span&gt;HPUAJIJO7SLODDRWWGEH&lt;span style="color:#f92672"&gt;&amp;lt;/AWSAccessKeyId&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;SignatureProvided&amp;gt;&lt;/span&gt;2484abdd29693104aaa1f6f565cdb73aaee0fb9fb94b24e7ff04149e4ca311b4&lt;span style="color:#f92672"&gt;&amp;lt;/SignatureProvided&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;StringToSign&amp;gt;&lt;/span&gt;AWS4-HMAC-SHA256
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; 20260929T103641Z 20260929/us-east-1/s3/aws4_request
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; 4e4f0057bff748b235d8ad1f2081ea85f51e86f928e638fb7369e63c0a602c48&lt;span style="color:#f92672"&gt;&amp;lt;/StringToSign&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;StringToSignBytes&amp;gt;&lt;/span&gt;41 57 53 34 2d 48 4d 41 43 2d 53 48 41 32 35 36 0a 32 30 32 36 30 39 32 39 54 31 30 33 36 34 31 5a 0a 32 30 32 36 30 39 32 39 2f 75 73 2d 65 61 73 74 2d 31 2f 73 33 2f 61 77 73 34 5f 72 65 71 75 65 73 74 0a 34 65 34 66 30 30 35 37 62 66 66 37 34 38 62 32 33 35 64 38 61 64 31 66 32 30 38 31 65 61 38 35 66 35 31 65 38 36 66 39 32 38 65 36 33 38 66 62 37 33 36 39 65 36 33 63 30 61 36 30 32 63 34 38&lt;span style="color:#f92672"&gt;&amp;lt;/StringToSignBytes&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;CanonicalRequest&amp;gt;&lt;/span&gt;GET
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; /2026/1233456&amp;amp;amp;amp;&amp;amp;amp;amp;7&amp;amp;amp;amp;&amp;amp;amp;amp;8&amp;amp;amp;amp;&amp;amp;amp;amp;9.xml
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; host:obs.cn-east-3.myhuaweicloud.com x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; x-amz-date:20260929T103641Z host;x-amz-content-sha256;x-amz-date
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855&lt;span style="color:#f92672"&gt;&amp;lt;/CanonicalRequest&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;&amp;lt;StringToSignBytes&amp;gt;&lt;/span&gt;47 45 54 0a 2f 32 30 32 36 2f 31 32 33 33 34 35 36 26 26 37 26 26 38 26 26 39 2e 78 6d 6c 0a 0a 68 6f 73 74 3a 6f 62 73 2e 63 6e 2d 65 61 73 74 2d 33 2e 6d 79 68 75 61 77 65 69 63 6c 6f 75 64 2e 63 6f 6d 0a 78 2d 61 6d 7a 2d 63 6f 6e 74 65 6e 74 2d 73 68 61 32 35 36 3a 65 33 62 30 63 34 34 32 39 38 66 63 31 63 31 34 39 61 66 62 66 34 63 38 39 39 36 66 62 39 32 34 32 37 61 65 34 31 65 34 36 34 39 62 39 33 34 63 61 34 39 35 39 39 31 62 37 38 35 32 62 38 35 35 0a 78 2d 61 6d 7a 2d 64 61 74 65 3a 32 30 32 36 30 39 32 39 54 31 30 33 36 34 31 5a 0a 0a 68 6f 73 74 3b 78 2d 61 6d 7a 2d 63 6f 6e 74 65 6e 74 2d 73 68 61 32 35 36 3b 78 2d 61 6d 7a 2d 64 61 74 65 0a 65 33 62 30 63 34 34 32 39 38 66 63 31 63 31 34 39 61 66 62 66 34 63 38 39 39 36 66 62 39 32 34 32 37 61 65 34 31 65 34 36 34 39 62 39 33 34 63 61 34 39 35 39 39 31 62 37 38 35 32 62 38 35 35&lt;span style="color:#f92672"&gt;&amp;lt;/StringToSignBytes&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#f92672"&gt;&amp;lt;/Error&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;从以上错误响应可以看出：问题在于请求签名校验失败了。首先，根据以上请求来看，第一个怀疑的是 &lt;code&gt;AWSAccessKeyId&lt;/code&gt; 配置是否存在问题，但考虑到 &lt;code&gt;Huawei OBS&lt;/code&gt; 既然声明兼容 &lt;code&gt;AWS S3&lt;/code&gt;，那么这里应当不是问题；同样 &lt;code&gt;RequestId&lt;/code&gt; 和 &lt;code&gt;HostId&lt;/code&gt; 作为请求分析和排查标识通常不会作为签名校验的一部分，因此同样略过；接下来是 &lt;code&gt;CanonicalRequest&lt;/code&gt; 和 &lt;code&gt;CanonicalRequestBytes&lt;/code&gt;，这两部分明显是一个整体，由于其和具体文件绑定，我们稍后再看；先检查 &lt;code&gt;StringToSign&lt;/code&gt; 和 &lt;code&gt;StringToSignBytes&lt;/code&gt; 部分，这里可以看出 &lt;code&gt;StringToSign&lt;/code&gt; 同样是一个互关联的配置并且其中包含了 &lt;code&gt;Region&lt;/code&gt; 使用的是 &lt;code&gt;us-east-1&lt;/code&gt; 明显与实际使用不一致。在修正了 &lt;code&gt;Region&lt;/code&gt; 配置后问题并没有解决，接下来我们继续验证 &lt;code&gt;403&lt;/code&gt; 问题是普遍性的问题还是与特定文件相关联的。在进一步处理之前可以先用以下 &lt;code&gt;Python&lt;/code&gt; 代码将 &lt;code&gt;Byte&lt;/code&gt; 字符串转为 &lt;code&gt;String&lt;/code&gt; 以便直观对比：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-python" data-lang="python"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;byte_str &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#e6db74"&gt;&amp;#34;&amp;#34;&amp;#34;some-bytes-here
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;hex_parts &lt;span style="color:#f92672"&gt;=&lt;/span&gt; byte_str&lt;span style="color:#f92672"&gt;.&lt;/span&gt;split()
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;result &lt;span style="color:#f92672"&gt;=&lt;/span&gt; bytes&lt;span style="color:#f92672"&gt;.&lt;/span&gt;fromhex(&lt;span style="color:#e6db74"&gt;&amp;#34;&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;join(hex_parts))&lt;span style="color:#f92672"&gt;.&lt;/span&gt;decode(&lt;span style="color:#e6db74"&gt;&amp;#34;UTF-8&amp;#34;&lt;/span&gt;)
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;print(result)
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;解析后的内容如下：&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;GET
+/2026/1233456&amp;amp;&amp;amp;7&amp;amp;&amp;amp;8&amp;amp;&amp;amp;9.xml
+host:obs.cn-east-3.myhuaweicloud.com
+x-amz-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-date:20260929T103641Z
+host;x-amz-content-sha256;x-amz-date
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;可以看出与原始 &lt;code&gt;CanonicalRequest&lt;/code&gt; 一致（除了因 &lt;code&gt;XML&lt;/code&gt; 语法原因进行编码的 &lt;code&gt;&amp;amp;&lt;/code&gt; 符号），此时基于对编解码的敏感性，应当可以大致确定问题是由编解码差异引起的。&lt;/p&gt;
+&lt;p&gt;经过验证发现 &lt;code&gt;403 Forbidden&lt;/code&gt; 问题确实在文件中包含 &lt;code&gt;&amp;amp;&lt;/code&gt; 时会出现，而对应常规仅含 &lt;code&gt;数字&lt;/code&gt; 和 &lt;code&gt;英文字母&lt;/code&gt; 以及 &lt;code&gt;中文&lt;/code&gt; 等的文件名时一切正常。既然问题明确了，最简单的方案是从业务上对文件名进行规范，但考虑到使用原始 &lt;code&gt;&amp;quot;com.huaweicloud&amp;quot; % &amp;quot;esdk-obs-java-bundle&amp;quot; % &amp;quot;3.26.6&amp;quot;&lt;/code&gt; 依赖时并不存在问题，另外还存在大量历史文件需要处理，因此有必要进一步明确关于请求签名生成的逻辑。&lt;/p&gt;
+&lt;p&gt;首先克隆 &lt;a href="https://github.com/apache/pekko-connectors"&gt;apache/pekko-connectors&lt;/a&gt; 最新代码并根据当前项目所使用的版本切换到对应分支或 &lt;code&gt;tag&lt;/code&gt;，这里我们以 &lt;code&gt;1.3.0&lt;/code&gt; 为例。依据之前针对失败响应分析出的信息可快速定位到代码 &lt;code&gt;s3/src/main/scala/org/apache/pekko/stream/connectors/s3/impl/auth/CanonicalRequest.scala&lt;/code&gt;，浏览该文件可以发现有以下代码片段：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// https://tools.ietf.org/html/rfc3986#section-2.2
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// Excludes &amp;#34;/&amp;#34; as it is an exception according to spec.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; reservedCharacters&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;String&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#e6db74"&gt;&amp;#34;:?#[]@!$&amp;amp;&amp;#39;()*+,;=&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;显然，这里定义的保留字符中便包含此前 &lt;code&gt;403&lt;/code&gt; 问题中文件名所使用的字符串，为进一步确认是否是保留字符的问题，我们手动修改 &lt;code&gt;reservedCharacters&lt;/code&gt; 定义，并移除 &lt;code&gt;&amp;amp;&lt;/code&gt; 字符后重新打包。&lt;/p&gt;
+&lt;p&gt;经验证，此时已经可以正常下载了。&lt;/p&gt;
+&lt;h2 id="验证"&gt;验证&lt;/h2&gt;
+&lt;p&gt;虽然 &lt;code&gt;Huawei OBS&lt;/code&gt; 的问题得以解决，但我们需要反思：为何使用 &lt;code&gt;MinIO&lt;/code&gt; 作为测试环境时没有遇到该问题？因此，在 &lt;strong&gt;MinIO&lt;/strong&gt; 和 &lt;strong&gt;Huawei OBS&lt;/strong&gt; 之外，又选取了 &lt;a href="https://garagehq.deuxfleurs.fr/"&gt;Garage&lt;/a&gt;、&lt;a href="https://www.cloudflare.com/products/r2/"&gt;Cloudflare R2&lt;/a&gt;、&lt;a href="https://cloud.tencent.com/product/cos"&gt;腾讯云 - 对象存储 COS&lt;/a&gt; 和 &lt;a href="https://www.qiniu.com/products/kodo"&gt;七牛云 - 对象存储 Kodo&lt;/a&gt; 等 &lt;code&gt;S3&lt;/code&gt; 实现进行测试。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;vendor&lt;/th&gt;
+&lt;th style="text-align: left"&gt;部署方式&lt;/th&gt;
+&lt;th style="text-align: left"&gt;保留字符串行为&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://www.min.io/"&gt;MinIO&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;私有&lt;/td&gt;
+&lt;td style="text-align: left"&gt;一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://garagehq.deuxfleurs.fr/"&gt;Garage&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;私有&lt;/td&gt;
+&lt;td style="text-align: left"&gt;一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://www.cloudflare.com/products/r2/"&gt;CloudFlare R2&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;云厂商&lt;/td&gt;
+&lt;td style="text-align: left"&gt;一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://www.huaweicloud.com/product/obs.html"&gt;Huawei OBS&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;云厂商&lt;/td&gt;
+&lt;td style="text-align: left"&gt;不一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://cloud.tencent.com/product/cos"&gt;Tencent COS&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;云厂商&lt;/td&gt;
+&lt;td style="text-align: left"&gt;不一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;a href="https://www.qiniu.com/products/kodo"&gt;Qiniu Kodo&lt;/a&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;云厂商&lt;/td&gt;
+&lt;td style="text-align: left"&gt;一致&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;从验证结果看，对于保留字符串的处理行为与 RFC 规范不一致的都是国内的存储厂商，而国外和开源的 &lt;code&gt;MinIO&lt;/code&gt; 和 &lt;code&gt;Garage&lt;/code&gt; 都遵守标准 RFC 行为。&lt;/p&gt;
+&lt;h2 id="合并回上游"&gt;合并回上游&lt;/h2&gt;
+&lt;p&gt;然问题已经解决，但是我们应该更多地将精力放在业务演进上，而不是维护一个专有分支。当然，最简单的方式就是在 &lt;code&gt;Github&lt;/code&gt; 上提 &lt;code&gt;issue&lt;/code&gt; 即可，这里我们多走一步直接把改好的代码通过 &lt;code&gt;fork&lt;/code&gt; 和 &lt;code&gt;pull request&lt;/code&gt; 形式提交到上游仓库。&lt;/p&gt;
+&lt;p&gt;将代码合并回上游时硬编码的方式就不再合适了。首先我们看一下 &lt;a href="https://github.com/apache/pekko-connectors"&gt;apache/pekko-connectors&lt;/a&gt; 仓库中关于贡献和代码准则是如何约定的。只有充分遵守社区规范才能更快地将我们的代码合并回主仓库。根据项目中 &lt;a href="https://github.com/apache/pekko-connectors/blob/main/README.md"&gt;README.md&lt;/a&gt; 中的描述可以看到该仓库关于贡献者和代码行为准则都在 &lt;a href="https://github.com/apache/pekko-connectors/blob/main/CONTRIBUTING.md"&gt;pekko-connectors/blob/main/CONTRIBUTING.md&lt;/a&gt; 和 &lt;a href="https://www.apache.org/foundation/policies/conduct.html"&gt;Code of Conduct&lt;/a&gt; 两个文件中。其中我们需要重点关注的是关于编码风格、单元测试、&lt;code&gt;commit&lt;/code&gt; 注释风格等相关内容，在熟悉完以上内容后就可以开始着手修改代码了。首先第一步是 &lt;code&gt;fork&lt;/code&gt; 主仓库，接下来就是将所有修改提交到自己 &lt;code&gt;fork&lt;/code&gt; 下来的仓库和分支中，完成 &lt;code&gt;commit&lt;/code&gt; 提交后再到对应主仓库中发起 &lt;code&gt;pull request&lt;/code&gt;，并描述清楚为什么要将修改合并回主仓库即可。&lt;/p&gt;
+&lt;h3 id="round-1"&gt;Round 1&lt;/h3&gt;
+&lt;p&gt;此前我们通过硬编码方式明确并解决了通过 &lt;a href="https://www.huaweicloud.com/product/obs.html"&gt;华为云 对象存储服务 (OBS) &lt;/a&gt; 出现 &lt;code&gt;Status code: 403 Forbidden&lt;/code&gt; 问题。&lt;/p&gt;
+&lt;p&gt;考虑到 &lt;strong&gt;Apache Pekko Connectors S3&lt;/strong&gt; 作为通用的 &lt;code&gt;S3&lt;/code&gt; 绑定，在对接不同 &lt;code&gt;S3&lt;/code&gt; 兼容存储时，不一定所有实现针对保留字符串的行为都一致，因此，我们将保留字部分以可配置项的形式暴露出来，以便使用者可以根据实际情况自行选择。&lt;/p&gt;
+&lt;p&gt;首先，我们在 &lt;code&gt;s3/src/main/resources/reference.conf&lt;/code&gt; 文件中添加关于 &lt;code&gt;reserved-characters&lt;/code&gt; 的配置：&lt;/p&gt;
+&lt;pre tabindex="0"&gt;&lt;code&gt;pekko.connectors.s3 {
+...
+reserved-characters = &amp;#34;:?#[]@!$&amp;amp;&amp;#39;()*+,;=&amp;#34;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;里默认使用 &lt;a href="https://tools.ietf.org/html/rfc3986#section-2.2"&gt;RFC 3986&lt;/a&gt; 中规定的保留字符。后续调用者在使用时如果有特殊需求，需要修改保留字符，只需在 &lt;code&gt;application.conf&lt;/code&gt; 文件中自定义即可。&lt;/p&gt;
+&lt;p&gt;接下来是修改 &lt;code&gt;s3/src/main/scala/org/apache/pekko/stream/connectors/s3/settings.scala&lt;/code&gt; 文件以便实现配置的读取：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; reservedCharacters&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Option&lt;/span&gt;&lt;span style="color:#f92672"&gt;[&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;String&lt;/span&gt;&lt;span style="color:#f92672"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里将 &lt;code&gt;reservedCharacters&lt;/code&gt; 定义为 &lt;code&gt;Option&lt;/code&gt; 类型是因为一般情况下不需要额外处理保留字，仅在接入那些未完全遵守 &lt;code&gt;RFC 3986&lt;/code&gt; 规范厂的商服务时才需要显式配置。&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;/** Java API */&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;def&lt;/span&gt; getReservedCharacters&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;java.util.Optional&lt;/span&gt;&lt;span style="color:#f92672"&gt;[&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;String&lt;/span&gt;&lt;span style="color:#f92672"&gt;]&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; reservedCharacters&lt;span style="color:#f92672"&gt;.&lt;/span&gt;toJava
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; reservedCharacters &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; &lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;.&lt;/span&gt;hasPath&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;reserved-characters&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;))&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;Option&lt;/span&gt;&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;.&lt;/span&gt;getString&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;reserved-characters&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;None&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;之后是修改 &lt;code&gt;s3/src/main/scala/org/apache/pekko/stream/connectors/s3/impl/auth/CanonicalRequest.scala&lt;/code&gt; 中关于保留字符的判断逻辑：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;def&lt;/span&gt; isReservedCharacter&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Char&lt;/span&gt;&lt;span style="color:#f92672"&gt;)(&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;implicit&lt;/span&gt; conf&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;S3Settings&lt;/span&gt;&lt;span style="color:#f92672"&gt;)&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Boolean&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;if&lt;/span&gt; &lt;span style="color:#f92672"&gt;(&lt;/span&gt;conf&lt;span style="color:#f92672"&gt;.&lt;/span&gt;reservedCharacters&lt;span style="color:#f92672"&gt;.&lt;/span&gt;isDefined&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; conf&lt;span style="color:#f92672"&gt;.&lt;/span&gt;getReservedCharacters&lt;span style="color:#f92672"&gt;.&lt;/span&gt;get&lt;span style="color:#f92672"&gt;().&lt;/span&gt;contains&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;else&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; reservedCharacters&lt;span style="color:#f92672"&gt;.&lt;/span&gt;contains&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里使用了 &lt;code&gt;implicit&lt;/code&gt;隐式变量避免显式传参问题，类似于 &lt;code&gt;Spring&lt;/code&gt; 的自动装配。&lt;/p&gt;
+&lt;p&gt;最后不能忘了单元测试：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;def&lt;/span&gt; getSettings&lt;span style="color:#f92672"&gt;(&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; bufferType&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;BufferType&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;MemoryBufferType&lt;/span&gt;&lt;span style="color:#f92672"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; awsCredentials&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;AwsCredentialsProvider&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;AnonymousCredentialsProvider&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;create&lt;span style="color:#f92672"&gt;(),&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; s3Region&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Region&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Region&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;US_EAST_1&lt;/span&gt;&lt;span style="color:#f92672"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; listBucketApiVersion&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;ApiVersion&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;ApiVersion&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;ListBucketVersion2&lt;/span&gt;&lt;span style="color:#f92672"&gt;)&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; regionProvider &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;new&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;AwsRegionProvider&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;def&lt;/span&gt; getRegion &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; s3Region
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; S3Settings&lt;span style="color:#f92672"&gt;(&lt;/span&gt;bufferType&lt;span style="color:#f92672"&gt;,&lt;/span&gt; awsCredentials&lt;span style="color:#f92672"&gt;,&lt;/span&gt; regionProvider&lt;span style="color:#f92672"&gt;,&lt;/span&gt; listBucketApiVersion&lt;span style="color:#f92672"&gt;,&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Map&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;empty&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;implicit&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; settings&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;S3Settings&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt; getSettings&lt;span style="color:#f92672"&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;由于我们之前重新实现了 &lt;code&gt;CanonicalRequest&lt;/code&gt; 中 &lt;code&gt;def isReservedCharacter&lt;/code&gt; 方法，同时在方法定义上追加了一个隐式变量，因此这里单元测试只需要增加一个 &lt;code&gt;S3Settings&lt;/code&gt; 的隐式变量定义即可。在 &lt;code&gt;Scala&lt;/code&gt; 中通常使用 &lt;code&gt;Scala Test&lt;/code&gt;，其行为更偏向 &lt;code&gt;BDD&lt;/code&gt; 风格：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; it should &lt;span style="color:#e6db74"&gt;&amp;#34;only encode the configured reserved characters, leaving other default ones unencoded&amp;#34;&lt;/span&gt; in &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#75715e"&gt;// &amp;#39;(&amp;#39; and &amp;#39;)&amp;#39; are in the default set, but not in the custom one
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; customSettings &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; getSettings&lt;span style="color:#f92672"&gt;(&lt;/span&gt;reservedCharacters &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Some&lt;/span&gt;&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;!&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; req &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; pathRequest&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;Uri&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;Path&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;Empty&lt;/span&gt; &lt;span style="color:#f92672"&gt;/&lt;/span&gt; &lt;span style="color:#e6db74"&gt;&amp;#34;file-(1)!.txt&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; canonicalRequest &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;CanonicalRequest&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;from&lt;span style="color:#f92672"&gt;(&lt;/span&gt;req&lt;span style="color:#f92672"&gt;)(&lt;/span&gt;customSettings&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; canonicalRequest&lt;span style="color:#f92672"&gt;.&lt;/span&gt;canonicalString should equal&lt;span style="color:#f92672"&gt;(&lt;/span&gt;expectedCanonical&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;/file-(1)%21.txt&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;))&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#a6e22e"&gt;CanonicalRequest&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;from&lt;span style="color:#f92672"&gt;(&lt;/span&gt;req&lt;span style="color:#f92672"&gt;).&lt;/span&gt;canonicalString should not&lt;span style="color:#f92672"&gt;).&lt;/span&gt;equal&lt;span style="color:#f92672"&gt;(&lt;/span&gt;canonicalRequest&lt;span style="color:#f92672"&gt;.&lt;/span&gt;canonicalString&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;以上只列出一小段的单元测试，除了 &lt;code&gt;CanonicalRequest&lt;/code&gt; 其他所有有修改逻辑地方最好都补充单元测试。&lt;/p&gt;
+&lt;h3 id="round-2"&gt;Round 2&lt;/h3&gt;
+&lt;p&gt;上一版基本上完成了功能拓展并考虑到了多厂商适配，但代码更多地还是以 &lt;code&gt;Java&lt;/code&gt; 风格书写，并不太符合 &lt;code&gt;Scala&lt;/code&gt; 风格，因此接下来我们使用更地道的 &lt;code&gt;Scala&lt;/code&gt; 风格改进以上代码。&lt;/p&gt;
+&lt;p&gt;首先是 &lt;code&gt;isReservedCharacter&lt;/code&gt; 方法，之前在第一版实现中我们采用了 &lt;code&gt;if-else&lt;/code&gt; 条件分支，但在 &lt;code&gt;Scala&lt;/code&gt; 中如果使用 &lt;code&gt;Option&lt;/code&gt; 的话则更推荐使用模式匹配，因此我们将实现进一步改成以下形式：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;def&lt;/span&gt; isReservedCharacter&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Char&lt;/span&gt;&lt;span style="color:#f92672"&gt;)(&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;implicit&lt;/span&gt; conf&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;S3Settings&lt;/span&gt;&lt;span style="color:#f92672"&gt;)&lt;/span&gt;&lt;span style="color:#66d9ef"&gt;:&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;Boolean&lt;/span&gt; &lt;span style="color:#f92672"&gt;=&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; conf&lt;span style="color:#f92672"&gt;.&lt;/span&gt;reservedCharacters &lt;span style="color:#66d9ef"&gt;match&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;case&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;Some&lt;/span&gt;&lt;span style="color:#f92672"&gt;(&lt;/span&gt;chars&lt;span style="color:#f92672"&gt;)&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;=&amp;gt;&lt;/span&gt; chars&lt;span style="color:#f92672"&gt;.&lt;/span&gt;contains&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;case&lt;/span&gt; &lt;span style="color:#a6e22e"&gt;None&lt;/span&gt; &lt;span style="color:#66d9ef"&gt;=&amp;gt;&lt;/span&gt; reservedCharacters&lt;span style="color:#f92672"&gt;.&lt;/span&gt;contains&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;另外就是在 &lt;code&gt;settings.scala&lt;/code&gt; 中我们定义的 &lt;code&gt;reservedCharacters&lt;/code&gt; 使用的 &lt;code&gt;if-else&lt;/code&gt; 分支可直接使用 &lt;code&gt;Option.when&lt;/code&gt; 简化：&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"&gt;&lt;code class="language-scala" data-lang="scala"&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#66d9ef"&gt;val&lt;/span&gt; reservedCharacters &lt;span style="color:#66d9ef"&gt;=&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#a6e22e"&gt;Option&lt;/span&gt;&lt;span style="color:#f92672"&gt;.&lt;/span&gt;when&lt;span style="color:#f92672"&gt;(&lt;/span&gt;c&lt;span style="color:#f92672"&gt;.&lt;/span&gt;hasPath&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;reserved-characters&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;))&lt;/span&gt; &lt;span style="color:#f92672"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; c&lt;span style="color:#f92672"&gt;.&lt;/span&gt;getString&lt;span style="color:#f92672"&gt;(&lt;/span&gt;&lt;span style="color:#e6db74"&gt;&amp;#34;reserved-characters&amp;#34;&lt;/span&gt;&lt;span style="color:#f92672"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; &lt;span style="color:#f92672"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;目前代码整体看起来较为简洁，最后一步就是验证代码风格是否遵守项目规范了。&lt;/p&gt;
+&lt;h2 id="其他"&gt;其他&lt;/h2&gt;
+&lt;p&gt;这个问题看起来是一个小问题，但反映出来的现象却可见一斑。首先，对于代码维护者或产品厂商来说要严格遵守 &lt;strong&gt;规范&lt;/strong&gt;，规范才是一切标准的准绳；其次，对于应用设计者而言，良好的技术远见和背景可以提前预见很多潜在风险从而避免一些奇怪的问题，而且架构的防御性设计是衡量软件可扩展性和稳定运行的重要维度。&lt;/p&gt;</content></item><item><title>构建健壮系统</title><link>https://blog.liloew.in/posts/build-robust-system/</link><pubDate>Sat, 12 Sep 2026 14:03:52 +0800</pubDate><guid>https://blog.liloew.in/posts/build-robust-system/</guid><description>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
 &lt;p&gt;在现代软件工程中，我们构建的系统规模越来越庞大，架构也从简单的单体演变为复杂的分布式系统。然而许多系统并没有因为架构升级而变得更加健壮，反而陷入了维护成本变高、故障定位困难、代码质量恶化的泥潭。&lt;/p&gt;
 &lt;p&gt;要真正打造具有高健壮性与可扩展性的系统，我们需要仔细审视那些让系统变得不稳定或性能下降的根因，而不是急于用防御代码或更细的服务拆分临时性地解决（掩盖）问题，只有找到病因才能对症下药。以下几点是笔者工作中的一些总结和思考，力求抛砖引玉。&lt;/p&gt;
 &lt;h2 id="锁是原罪"&gt;锁是原罪&lt;/h2&gt;
