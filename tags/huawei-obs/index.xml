@@ -9,41 +9,7 @@
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt; InputStream &lt;span style="color:#a6e22e"&gt;downloadFile&lt;/span&gt;(String path);
 &lt;/span&gt;&lt;/span&gt;&lt;span style="display:flex;"&gt;&lt;span&gt;}
-&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;考虑到可能接入的兼容 &lt;code&gt;S3&lt;/code&gt; 实现我们选取了 &lt;code&gt;AWS S3&lt;/code&gt;，&lt;code&gt;MinIO&lt;/code&gt; 和 &lt;code&gt;Huawei OBS&lt;/code&gt;，接下来以标准的 &lt;code&gt;AWS S3&lt;/code&gt; 为例。&lt;/p&gt;
-&lt;pre tabindex="0"&gt;&lt;code&gt;
-@Slf4j
-@Service
-@ConditionalOnProperty(prefix = &amp;#34;file&amp;#34;, value = &amp;#34;vendor&amp;#34;, havingValue = &amp;#34;aws&amp;#34;, matchIfMissing = false)
-public class AWSStorageServiceImpl implements IStorageService {
-private final FileProperties properties;
-private final S3Client s3Client;
-public AWSStorageServiceImpl(FileProperties properties) {
-this.properties = properties;
-this.s3Client = S3Client.builder()
-.region(Region.of(properties.getRegion()))
-.credentialsProvider(() -&amp;gt; AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey()))
-.build();
-}
-@Override
-public Vendor getVendor() {
-return Vendor.AWS;
-}
-@Override
-public InputStream downloadFile(String path) {
-try {
-GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-.bucket(defaultBucket())
-.key(path)
-.build();
-ResponseInputStream&amp;lt;GetObjectResponse&amp;gt; response = s3Client.getObject(getObjectRequest);
-return response;
-} catch (Exception e) {
-log.error(&amp;#34;Download file error - AWS - path: {} Exception: &amp;#34;, path, e);
-}
-return null;
-}
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;这里我们只实现了一个 &lt;code&gt;downloadFile&lt;/code&gt;，在实际使用时至少还需要提供 &lt;strong&gt;文件上传&lt;/strong&gt;，&lt;strong&gt;获取元数据&lt;/strong&gt;，&lt;strong&gt;创建桶&lt;/strong&gt; 和 &lt;strong&gt;查看桶内文件列表&lt;/strong&gt; 等功能。至少目前下载文件的功能看起来工作的不错，同时 &lt;strong&gt;单接口多实现&lt;/strong&gt; 也充分考虑到了可能会对接多种 &lt;code&gt;S3&lt;/code&gt; 兼容实现的场景。&lt;/p&gt;</description><content>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;考虑到可能接入的兼容 &lt;code&gt;S3&lt;/code&gt; 实现我们选取了 &lt;code&gt;AWS S3&lt;/code&gt;，&lt;code&gt;MinIO&lt;/code&gt; 和 &lt;code&gt;Huawei OBS&lt;/code&gt;，接下来以标准的 &lt;code&gt;AWS S3&lt;/code&gt; 为例。&lt;/p&gt;</description><content>&lt;h2 id="背景"&gt;背景&lt;/h2&gt;
 &lt;p&gt;在软件开发领域文件访问是绕不开的内容，无论是从最早的 &lt;code&gt;FTP&lt;/code&gt;，还是到后来的 &lt;code&gt;SFTP&lt;/code&gt;、&lt;code&gt;WebDAV&lt;/code&gt;，乃至现在占据主流的 &lt;code&gt;S3&lt;/code&gt; 兼容协议，文件存取一直在向着访问安全、接入简易和弹性扩展的方向演进。因此越来越多的云厂商或开源项目锚定 &lt;code&gt;S3&lt;/code&gt; 协议不断开发各种衍生产品。&lt;/p&gt;
 &lt;p&gt;正好之前项目中涉及文件存取相关的需求，在适配和开发过程中遇到一些问题记录在此处。目前问题已经提交回官方并经过了一轮 &lt;code&gt;Review&lt;/code&gt;，目前是待合并状态。&lt;/p&gt;
 &lt;h2 id="第一次封装"&gt;第一次封装&lt;/h2&gt;
